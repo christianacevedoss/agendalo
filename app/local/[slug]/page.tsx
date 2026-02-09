@@ -107,7 +107,7 @@ export default function PaginaLocal() {
 
     const { error } = await supabase.from('agendamientos').insert([{
       cliente_nombre: nombre, 
-      cliente_email: email, 
+      cliente_correo: email, 
       cliente_telefono: `+569${telefonoInput}`, 
       servicio_id: servicioSeleccionado.id, 
       local: slug,
