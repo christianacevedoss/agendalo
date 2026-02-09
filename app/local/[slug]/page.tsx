@@ -365,6 +365,6 @@ export default function PaginaLocal() {
           </div>
         </div>
       )}
-    </main>
+    </main> 
   );
 }
