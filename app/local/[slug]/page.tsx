@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-// VOLVEMOS A LA RUTA RELATIVA SEGURA:
 import { supabase } from '../../../lib/supabase' 
 import { useParams } from 'next/navigation'
 import { 
@@ -35,18 +34,19 @@ interface Servicio {
   imagen_url: string;
 }
 
-// Eliminamos los tipos complejos de las props y usamos useParams
 export default function PaginaLocal() {
   const params = useParams();
-  // Validación de seguridad por si params es null
   const slug = params ? (params.slug as string) : '';
 
   const [local, setLocal] = useState<Local | null>(null);
   const [servicios, setServicios] = useState<Servicio[]>([]);
   const [cargando, setCargando] = useState(true);
-  const [mostrarForm, setMostrarForm] = useState(false);
-  const [servicioSeleccionado, setServicioSeleccionado] = useState<Servicio | null>(null);
   
+  // Estados de interfaz
+  const [mostrarForm, setMostrarForm] = useState(false);
+  const [reservaExitosa, setReservaExitosa] = useState(false); // <--- NUEVO ESTADO
+  
+  const [servicioSeleccionado, setServicioSeleccionado] = useState<Servicio | null>(null);
   const [mesActual, setMesActual] = useState(new Date());
   const [diaSeleccionado, setDiaSeleccionado] = useState<Date | null>(null);
   const [horaSeleccionada, setHoraSeleccionada] = useState('');
@@ -64,11 +64,8 @@ export default function PaginaLocal() {
 
     async function cargar() {
       try {
-        const { data: L, error: errorL } = await supabase.from('locales').select('*').eq('slug', slug).single();
-        const { data: S, error: errorS } = await supabase.from('servicios').select('*').eq('local_slug', slug);
-        
-        if (errorL) console.error("Error cargando local:", errorL);
-        
+        const { data: L } = await supabase.from('locales').select('*').eq('slug', slug).single();
+        const { data: S } = await supabase.from('servicios').select('*').eq('local_slug', slug);
         if (L) setLocal(L as Local); 
         if (S) setServicios(S as Servicio[]);
       } catch (err) {
@@ -117,10 +114,10 @@ export default function PaginaLocal() {
     
     if (error) {
       alert('Hubo un error al guardar. Inténtalo de nuevo.');
-      console.error(error);
       return;
     }
 
+    // Enviamos el correo con los NUEVOS DATOS (Dirección y Mapa)
     try {
       await fetch('/api/send', {
         method: 'POST',
@@ -133,18 +130,25 @@ export default function PaginaLocal() {
           fecha: format(diaSeleccionado as Date, "dd 'de' MMMM", { locale: es }),
           hora: horaSeleccionada,
           localNombre: local?.nombre || 'Local',
-          telefonoLocal: local?.telefono_local || 'Contacto'
+          telefonoLocal: local?.telefono_local || 'Contacto',
+          direccionLocal: local?.direccion || '', // <--- Enviamos la dirección
+          mapsUrl: local?.maps_url || '#'         // <--- Enviamos el link del mapa
         })
       });
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error enviando correo:", err);
     }
 
-    alert(`¡Listo ${nombre}! Tu hora ha sido agendada y te enviamos un correo de confirmación.`); 
+    // EN LUGAR DE ALERT, MOSTRAMOS LA PANTALLA DE ÉXITO
     setMostrarForm(false); 
+    setReservaExitosa(true); // <--- Activamos el mensaje bonito
+  };
+
+  const cerrarTodo = () => {
+    setReservaExitosa(false);
     setNombre(''); setEmail(''); setTelefonoInput('');
     setDiaSeleccionado(null); setHoraSeleccionada('');
-  };
+  }
 
   const dias = eachDayOfInterval({ 
     start: startOfWeek(startOfMonth(mesActual), { weekStartsOn: 1 }), 
@@ -156,6 +160,30 @@ export default function PaginaLocal() {
 
   return (
     <main className="min-h-screen bg-white font-sans text-gray-900 pb-20">
+      
+      {/* MENSAJE DE ÉXITO BONITO (Overlay) */}
+      {reservaExitosa && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-[60] animate-in fade-in duration-300">
+          <div className="bg-white rounded-[2rem] p-8 max-w-md w-full text-center shadow-2xl transform transition-all scale-100">
+            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <span className="text-4xl">✅</span>
+            </div>
+            <h2 className="text-2xl font-black text-gray-900 mb-2">¡Listo {nombre}!</h2>
+            <p className="text-gray-500 font-medium mb-8">
+              Tu hora ha sido agendada correctamente. <br/>
+              Te hemos enviado un correo de confirmación.
+            </p>
+            <button 
+              onClick={cerrarTodo}
+              className="w-full bg-black text-white py-4 rounded-xl font-bold hover:bg-gray-800 transition shadow-lg"
+            >
+              Entendido
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Banner */}
       <div className="h-64 bg-blue-900 relative flex items-center justify-center text-white text-center">
         <img src={local.foto_banner} className="absolute inset-0 w-full h-full object-cover opacity-40" alt="" />
         <h1 className="relative text-4xl md:text-6xl font-black uppercase tracking-tighter px-4 drop-shadow-lg">{local.nombre}</h1>
@@ -173,7 +201,6 @@ export default function PaginaLocal() {
               )}
               {local.telefono_local && (
                 <a href={`https://wa.me/${local.telefono_local.replace(/\D/g, '')}`} target="_blank" className="bg-[#25D366] text-white px-5 py-2 rounded-xl font-bold text-sm flex items-center gap-3 shadow-lg hover:scale-105 transition-transform">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.72.937 3.659 1.432 5.631 1.433h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
                   WhatsApp {local.telefono_local}
                 </a>
               )}
@@ -200,11 +227,12 @@ export default function PaginaLocal() {
         </div>
       </div>
 
-      {mostrarForm && servicioSeleccionado && (
+      {mostrarForm && servicioSeleccionado && !reservaExitosa && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-[3rem] shadow-2xl overflow-hidden max-w-5xl w-full flex flex-col md:flex-row max-h-[90vh]">
             
             <div className="p-8 border-r bg-gray-50/50 md:w-1/2 overflow-y-auto">
+              {/* (Contenido del calendario igual que antes...) */}
               <div className="mb-6">
                 <p className="text-blue-600 font-black uppercase text-[10px] tracking-widest mb-1">Paso 1</p>
                 <h3 className="text-xl font-bold leading-tight tracking-tight text-gray-800">

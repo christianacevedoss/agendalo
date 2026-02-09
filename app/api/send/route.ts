@@ -6,21 +6,37 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { nombre, email, servicio, fecha, hora, localNombre, precio, telefonoLocal } = body;
+    const { 
+      nombre, 
+      email, 
+      servicio, 
+      fecha, 
+      hora, 
+      localNombre, 
+      precio, 
+      telefonoLocal,
+      direccionLocal, // <--- Nuevo dato
+      mapsUrl         // <--- Nuevo dato
+    } = body;
 
     const { data, error } = await resend.emails.send({
-      from: 'Agéndalo <onboarding@resend.dev>', // Correo oficial de pruebas de Resend
-      to: [email], // En modo prueba, SOLO llegará si pones el correo con el que te registraste en Resend
-      subject: `✅ Reserva Confirmada: ${servicio}`,
+      from: 'Agéndalo <onboarding@resend.dev>',
+      to: [email],
+      // ASUNTO PERSONALIZADO:
+      subject: `✅ Reserva Confirmada: ${servicio} en ${localNombre}`,
       html: `
-        <div style="font-family: Arial, sans-serif; background-color: #f3f4f6; padding: 40px 20px;">
+        <div style="font-family: sans-serif; background-color: #f3f4f6; padding: 40px 20px;">
           <div style="max-width: 500px; margin: 0 auto; background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
             
             <div style="background-color: #10B981; padding: 30px; text-align: center;">
-              <div style="background: white; width: 60px; height: 60px; border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center;">
-                <span style="font-size: 30px; line-height: 60px; display:block;">✔</span>
-              </div>
-              <h1 style="color: white; margin: 0; font-size: 24px; font-weight: bold;">¡Reserva Exitosa!</h1>
+              <table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin: 0 auto;">
+                <tr>
+                  <td style="background: white; width: 60px; height: 60px; border-radius: 50%; text-align: center; vertical-align: middle;">
+                     <span style="font-size: 30px; line-height: 1;">✔</span>
+                  </td>
+                </tr>
+              </table>
+              <h1 style="color: white; margin: 15px 0 0; font-size: 24px; font-weight: bold;">¡Reserva Exitosa!</h1>
               <p style="color: #ecfdf5; margin: 5px 0 0; font-size: 16px;">Hola ${nombre}, tu cita está lista.</p>
             </div>
 
@@ -46,10 +62,20 @@ export async function POST(request: Request) {
                     <td style="padding: 8px 0; color: #111827; text-align: right;">${localNombre}</td>
                   </tr>
                   <tr>
+                     <td style="padding: 8px 0; color: #374151;">🏠 <strong>Dirección:</strong></td>
+                     <td style="padding: 8px 0; color: #111827; text-align: right; font-size: 14px;">${direccionLocal || 'Dirección por confirmar'}</td>
+                  </tr>
+                  <tr>
                     <td style="padding: 8px 0; color: #374151;">📞 <strong>Contacto:</strong></td>
                     <td style="padding: 8px 0; color: #111827; text-align: right;">${telefonoLocal || 'N/A'}</td>
                   </tr>
                 </table>
+              </div>
+
+              <div style="text-align: center; margin-top: 25px;">
+                <a href="${mapsUrl}" target="_blank" style="background-color: #2563EB; color: white; padding: 12px 25px; text-decoration: none; border-radius: 10px; font-weight: bold; font-size: 14px; display: inline-block;">
+                   📍 Ver ubicación en Google Maps
+                </a>
               </div>
 
               <div style="margin-top: 30px; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 20px;">
@@ -67,7 +93,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ data });
-  } catch (error) {
+  } catch (error: any) {
     return NextResponse.json({ error }, { status: 500 });
   }
 }
