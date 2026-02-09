@@ -1,64 +1,59 @@
-import { supabase } from '../../../lib/supabase' // Subimos 3 niveles: [slug] -> local -> app
-
-
-// Esto cambia el título de la pestaña según el local
-export async function generateMetadata({ params }: { params: { slug: string } }) {
-  // Aquí podrías incluso buscar el nombre real en Supabase, 
-  // pero por ahora usemos el slug formateado.
-  const nombre = params.slug.replace('-', ' ').toUpperCase();
-  
-  return {
-    title: `${nombre} | Agéndalo Talca`,
-  };
-}
+import { supabase } from '../../../lib/supabase'
 
 export const dynamic = 'force-dynamic'
 
 export default async function PaginaLocal({ params }: { params: { slug: string } }) {
-  // Buscamos los servicios que pertenecen a este local específico usando el slug
-  const { data: servicios, error } = await supabase
-    .from('servicios')
-    .select('*')
-    .eq('local_slug', params.slug)
+  try {
+    // Consultamos la tabla servicios filtrando por el slug de la URL
+    const { data: servicios, error } = await supabase
+      .from('servicios')
+      .select('*')
+      .eq('local_slug', params.slug)
 
-  // Si el link no existe o no tiene servicios, mostramos aviso
-  if (error || !servicios || servicios.length === 0) {
+    // Si Supabase devuelve un error técnico, lo lanzamos para atraparlo abajo
+    if (error) throw error;
+
+    // Si no hay servicios para ese slug, mostramos aviso amigable
+    if (!servicios || servicios.length === 0) {
+      return (
+        <div className="p-10 text-center font-sans">
+          <h1 className="text-xl text-gray-600">No encontramos servicios para "{params.slug}"</h1>
+          <p className="text-sm text-gray-400 mt-2">Verifica el nombre en la base de datos.</p>
+        </div>
+      )
+    }
+
+    const nombreLocal = servicios[0].local
+
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p className="text-gray-500 font-medium text-lg">Este local aún no tiene servicios disponibles.</p>
+      <main className="min-h-screen p-8 bg-gray-50 font-sans">
+        <h1 className="text-4xl font-bold text-center mb-2 text-blue-700 uppercase tracking-tight">
+          {nombreLocal}
+        </h1>
+        <div className="h-1 w-20 bg-blue-500 mx-auto mb-10 rounded-full"></div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+          {servicios.map((servicio) => (
+            <div key={servicio.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+              <h2 className="text-xl font-bold text-gray-800">{servicio.nombre}</h2>
+              <p className="text-blue-600 font-black text-2xl mt-2">
+                ${servicio.precio.toLocaleString('es-CL')}
+              </p>
+              <button className="w-full mt-6 bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition">
+                AGENDAR AHORA
+              </button>
+            </div>
+          ))}
+        </div>
+      </main>
+    )
+  } catch (err: any) {
+    // Si hay un error de servidor, lo mostramos aquí para diagnosticar
+    return (
+      <div className="p-10 bg-red-50 text-red-800 m-5 rounded-xl border border-red-200">
+        <h2 className="font-bold">Error de Servidor:</h2>
+        <p className="text-sm mt-2">{err.message || 'Error desconocido al conectar con Supabase'}</p>
       </div>
     )
   }
-
-  const nombreLocal = servicios[0].local
-
-  return (
-    <main className="min-h-screen p-8 bg-white">
-      {/* Título dinámico que cambia según el local */}
-      <div className="max-w-4xl mx-auto text-center mb-12">
-        <h1 className="text-4xl font-extrabold text-blue-700 uppercase tracking-tight">
-          {nombreLocal}
-        </h1>
-        <div className="h-1 w-20 bg-blue-500 mx-auto mt-4 rounded-full"></div>
-        <p className="mt-4 text-gray-600">Reserva tu servicio en línea de forma rápida.</p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-        {servicios.map((servicio) => (
-          <div key={servicio.id} className="p-6 border border-gray-200 rounded-2xl shadow-sm hover:shadow-md transition">
-            <h2 className="text-xl font-bold text-gray-800">{servicio.nombre}</h2>
-            <span className="text-xs font-bold uppercase tracking-wider text-blue-500 bg-blue-50 px-2 py-1 rounded">
-              {servicio.categoria}
-            </span>
-            <p className="text-3xl font-black text-gray-900 mt-4">
-              ${servicio.precio.toLocaleString('es-CL')}
-            </p>
-            <button className="w-full mt-6 bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition transform active:scale-95">
-              AGENDAR CITA
-            </button>
-          </div>
-        ))}
-      </div>
-    </main>
-  )
 }
