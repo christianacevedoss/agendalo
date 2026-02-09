@@ -32,7 +32,7 @@ export async function POST(request: Request) {
               <table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin: 0 auto;">
                 <tr>
                   <td style="background: white; width: 80px; height: 80px; border-radius: 50%; text-align: center; vertical-align: middle; padding: 10px;">
-    <img src="https://agendalo-talca.vercel.app/logos/logo-agendalo.pngg" width="60" height="60" alt="Agéndalo" style="display: block; margin: 0 auto;" />
+    <img src="https://agendalo-talca.vercel.app/logos/logo-agendalo.png" width="60" height="60" alt="Agéndalo" style="display: block; margin: 0 auto;" />
 </td>
                 </tr>
               </table>

@@ -154,35 +154,33 @@ export default function PaginaLocal() {
   if (cargando) return <div className="min-h-screen flex items-center justify-center font-bold text-blue-600 animate-pulse uppercase tracking-widest">Cargando...</div>;
   if (!local) return <div className="min-h-screen flex items-center justify-center font-bold text-red-500">Local no encontrado</div>;
 
-return (
-    // 1. AGREGA 'relative' AL FINAL DE LAS CLASES AQUÍ:
+  return (
     <main className="min-h-screen bg-white font-sans text-gray-900 pb-20 relative">
       
-      {/* 2. PEGA EL LOGO AQUÍ (NUEVO) */}
-      <div className="absolute top-4 left-4 z-20">
-        <div className="bg-white/90 backdrop-blur-sm p-2 rounded-2xl shadow-lg border border-white/50">
-           <img 
-             src="/logos/logo-agendalo.png" 
-             alt="Logo Agéndalo" 
-             className="w-12 h-12 object-contain" 
-           />
-        </div>
-      </div>
-      {/* MENSAJE DE ÉXITO */}
+      {/* MENSAJE DE ÉXITO (MODAL FINAL) */}
       {reservaExitosa && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-[60] animate-in fade-in duration-300">
-          <div className="bg-white rounded-[2rem] p-8 max-w-md w-full text-center shadow-2xl transform transition-all scale-100">
-            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <span className="text-4xl">✅</span>
+          <div className="bg-white rounded-[2rem] p-8 max-w-md w-full text-center shadow-2xl transform transition-all scale-100 relative overflow-hidden">
+            
+            {/* 2. LOGO EN VEZ DEL CHECK (Centrado y Grande) */}
+            <div className="w-24 h-24 mx-auto mb-6 flex items-center justify-center">
+               <img 
+                 src="/logos/logo-agendalo.png" 
+                 alt="Logo Agendalo" 
+                 className="w-full h-full object-contain drop-shadow-md" 
+               />
             </div>
+            
             <h2 className="text-2xl font-black text-gray-900 mb-2">¡Listo {nombre}!</h2>
+            
             <p className="text-gray-500 font-medium mb-8">
-              Tu hora ha sido agendada correctamente. <br/>
-              Te hemos enviado un correo de confirmación.
+              Tu hora para <span className="font-bold text-blue-600">{servicioSeleccionado?.nombre}</span> ha sido agendada correctamente. <br/>
+              Revisa tu correo para más detalles.
             </p>
+            
             <button 
               onClick={cerrarTodo}
-              className="w-full bg-black text-white py-4 rounded-xl font-bold hover:bg-gray-800 transition shadow-lg"
+              className="w-full bg-black text-white py-4 rounded-xl font-bold hover:bg-gray-800 transition shadow-lg uppercase tracking-widest text-sm"
             >
               Entendido
             </button>
@@ -239,13 +237,9 @@ return (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-0 md:p-4 z-50">
           <div className="bg-white md:rounded-[3rem] shadow-2xl overflow-hidden max-w-5xl w-full h-full md:h-auto md:max-h-[90vh] flex flex-col md:flex-row">
             
-            {/* --- COLUMNA IZQUIERDA: CALENDARIO --- 
-                Lógica Mobile: Si NO hay hora seleccionada, se muestra (block). Si SÍ hay hora, se oculta (hidden).
-                Lógica Desktop: Siempre se muestra (md:block).
-            */}
+            {/* COLUMNA IZQUIERDA: CALENDARIO */}
             <div className={`p-6 md:p-8 border-r bg-gray-50/50 md:w-1/2 overflow-y-auto ${horaSeleccionada ? 'hidden md:block' : 'block'}`}>
               
-              {/* Botón Cerrar (Solo Mobile) */}
               <button onClick={() => setMostrarForm(false)} className="md:hidden mb-4 text-gray-400 font-bold text-sm">
                 ✕ CERRAR
               </button>
@@ -253,11 +247,11 @@ return (
               <div className="mb-6">
                 <p className="text-blue-600 font-black uppercase text-[10px] tracking-widest mb-1">Paso 1: Elige Fecha</p>
                 <h3 className="text-xl font-bold leading-tight tracking-tight text-gray-800">
-  Reserva para: <br/>
-  <span className="text-blue-600">
-    {servicioSeleccionado.nombre} — ${servicioSeleccionado.precio.toLocaleString('es-CL')}
-  </span>
-</h3>
+                  Reserva para: <br/>
+                  <span className="text-blue-600">
+                    {servicioSeleccionado.nombre} — ${servicioSeleccionado.precio.toLocaleString('es-CL')}
+                  </span>
+                </h3>
               </div>
               
               <div className="bg-white p-4 md:p-6 rounded-3xl border mb-6 shadow-sm">
@@ -313,13 +307,9 @@ return (
               )}
             </div>
 
-            {/* --- COLUMNA DERECHA: FORMULARIO --- 
-                Lógica Mobile: Si NO hay hora, se oculta (hidden). Si SÍ hay hora, se muestra (flex).
-                Lógica Desktop: Siempre se muestra (md:flex).
-            */}
+            {/* COLUMNA DERECHA: FORMULARIO */}
             <div className={`p-6 md:p-8 md:w-1/2 flex-col justify-center bg-white overflow-y-auto ${!horaSeleccionada ? 'hidden md:flex' : 'flex'}`}>
               
-              {/* Botón Volver (Solo Mobile) */}
               <button 
                 onClick={() => setHoraSeleccionada('')} 
                 className="md:hidden mb-6 flex items-center gap-2 text-gray-500 font-bold text-xs uppercase tracking-widest"
@@ -334,12 +324,23 @@ return (
               ) : (
                 <form onSubmit={enviar} className="space-y-4 animate-in slide-in-from-right-4 duration-500">
                   
-                  <div className="bg-green-50 p-5 rounded-2xl border border-green-100 mb-2 shadow-sm">
-                    <p className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-1">Tu cita</p>
-                    <p className="font-bold text-green-900 leading-tight">
-                      {format(diaSeleccionado as Date, "eeee dd 'de' MMMM", {locale: es})} <br/>
-                      a las {horaSeleccionada} hrs
-                    </p>
+                  {/* 1. CAJA VERDE CON LOGO A LA DERECHA */}
+                  <div className="bg-green-50 p-5 rounded-2xl border border-green-100 mb-2 shadow-sm flex justify-between items-center">
+                    <div>
+                      <p className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-1">Tu cita</p>
+                      <p className="font-bold text-green-900 leading-tight text-sm md:text-base">
+                        {format(diaSeleccionado as Date, "eeee dd 'de' MMMM", {locale: es})} <br/>
+                        a las {horaSeleccionada} hrs
+                      </p>
+                    </div>
+                    {/* El Logo aquí a la derecha */}
+                    <div className="pl-4">
+                      <img 
+                        src="/logos/logo-agendalo.png" 
+                        alt="Logo" 
+                        className="w-12 h-12 object-contain opacity-80" 
+                      />
+                    </div>
                   </div>
                   
                   <input required placeholder="Nombre Completo" className="w-full border p-4 rounded-2xl outline-none bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all font-medium" value={nombre} onChange={e => setNombre(e.target.value)} />
@@ -378,6 +379,6 @@ return (
           </div>
         </div>
       )}
-    </main> 
+    </main>
   );
 }
