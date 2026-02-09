@@ -3,7 +3,7 @@
 import { useState, useEffect, use } from 'react'
 import { supabase } from '../../../lib/supabase'
 
-// 1. Definimos las interfaces para que TypeScript sepa exactamente qué datos esperar
+// 1. Interfaces estrictas para que el Build sepa qué datos esperar
 interface Local {
   nombre: string;
   foto_banner: string;
@@ -19,34 +19,33 @@ interface Servicio {
 }
 
 export default function PaginaLocal(props: { params: Promise<{ slug: string }> }) {
-  // Desenvolvemos los parámetros de la URL (slug)
+  // Desenvolvemos el slug de la URL de forma segura para Next.js 15
   const params = use(props.params);
   
-  // Estados para almacenar la información de la base de datos
+  // Estados con tipado para evitar errores de "undefined"
   const [local, setLocal] = useState<Local | null>(null);
   const [servicios, setServicios] = useState<Servicio[]>([]);
   const [cargando, setCargando] = useState(true);
   
-  // Estados para el flujo de reserva
+  // Estados para el flujo de la agenda
   const [mostrarForm, setMostrarForm] = useState(false);
   const [servicioSeleccionado, setServicioSeleccionado] = useState<Servicio | null>(null);
   const [metodoPago, setMetodoPago] = useState<'presencial' | 'online'>('presencial');
 
-  // Estados del formulario del cliente
+  // Datos del cliente
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
   const [telefono, setTelefono] = useState('');
 
   useEffect(() => {
     async function cargarDatos() {
-      // Consultamos el local por su slug único
+      // Consulta al local y sus servicios en Talca
       const { data: datosLocal } = await supabase
         .from('locales')
         .select('*')
         .eq('slug', params.slug)
         .single();
 
-      // Consultamos los servicios asociados
       const { data: datosServicios } = await supabase
         .from('servicios')
         .select('*')
@@ -63,14 +62,14 @@ export default function PaginaLocal(props: { params: Promise<{ slug: string }> }
     e.preventDefault();
     if (!servicioSeleccionado) return;
 
-    // Lógica para pagos online futuros
+    // Lógica para el futuro link de pago
     if (metodoPago === 'online') {
-      alert('Redirigiendo a pago online...');
+      alert('Redirigiendo a pago online con descuento...');
       window.location.href = "https://www.mercadopago.cl";
       return;
     }
 
-    // Guardamos la cita en la tabla 'agendamientos'
+    // Guardamos la reserva en la tabla agendamientos
     const { error } = await supabase
       .from('agendamientos')
       .insert([{
@@ -88,14 +87,15 @@ export default function PaginaLocal(props: { params: Promise<{ slug: string }> }
     }
   };
 
-  if (cargando) return <div className="p-20 text-center font-bold text-gray-400 uppercase tracking-widest">Cargando local...</div>;
+  // Pantalla de carga profesional
+  if (cargando) return <div className="p-20 text-center font-bold text-gray-400 uppercase">Cargando local...</div>;
   
-  // Si después de cargar no hay local, mostramos error amigable
-  if (!local) return <div className="p-20 text-center font-bold text-red-500">Local no encontrado en Talca</div>;
+  // Guardia de seguridad: Si el local no existe en Supabase, no rompemos el sitio
+  if (!local) return <div className="p-20 text-center font-bold text-red-500">Local no encontrado</div>;
 
   return (
-    <main className="min-h-screen bg-white font-sans">
-      {/* Banner Principal con Imagen de Respaldo */}
+    <main className="min-h-screen bg-white font-sans text-gray-900">
+      {/* Banner con respaldo si no hay imagen */}
       <div className="h-64 md:h-80 bg-blue-900 relative">
         <img 
           src={local.foto_banner || 'https://images.unsplash.com/photo-1521737711867-e3b97375f902?w=1200'} 
@@ -103,14 +103,14 @@ export default function PaginaLocal(props: { params: Promise<{ slug: string }> }
           alt="Banner" 
         />
         <div className="absolute inset-0 flex items-center justify-center">
-          <h1 className="text-white text-4xl md:text-6xl font-black uppercase text-center drop-shadow-lg px-4">
+          <h1 className="text-white text-4xl md:text-6xl font-black uppercase text-center px-4 drop-shadow-md">
             {local.nombre}
           </h1>
         </div>
       </div>
 
       <div className="max-w-4xl mx-auto px-6 py-10">
-        {/* Botones de Contacto y Ubicación */}
+        {/* Botones de interacción rápida */}
         <div className="flex flex-wrap justify-center gap-4 mb-12">
           {local.google_maps_url && (
             <a href={local.google_maps_url} target="_blank" className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-6 py-3 rounded-2xl font-bold transition">
@@ -124,7 +124,7 @@ export default function PaginaLocal(props: { params: Promise<{ slug: string }> }
           )}
         </div>
 
-        <h2 className="text-2xl font-bold mb-8 text-gray-800 border-b pb-4">Servicios Disponibles</h2>
+        <h2 className="text-2xl font-bold mb-8 border-b pb-4">Nuestros Servicios</h2>
         
         <div className="grid gap-6">
           {servicios.map(s => (
@@ -134,7 +134,7 @@ export default function PaginaLocal(props: { params: Promise<{ slug: string }> }
               </div>
               <div className="p-6 flex flex-1 items-center justify-between">
                 <div>
-                  <h3 className="text-xl font-bold text-gray-900">{s.nombre}</h3>
+                  <h3 className="text-xl font-bold">{s.nombre}</h3>
                   <p className="text-blue-600 font-black text-2xl mt-1">
                     ${s.precio.toLocaleString('es-CL')}
                   </p>
@@ -151,12 +151,12 @@ export default function PaginaLocal(props: { params: Promise<{ slug: string }> }
         </div>
       </div>
 
-      {/* Modal de Agendamiento con Resumen */}
+      {/* Modal de Reserva con Resumen de Pago */}
       {mostrarForm && servicioSeleccionado && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-3xl overflow-hidden w-full max-w-md shadow-2xl">
             <div className="p-6 bg-gray-50 border-b flex items-center gap-4">
-              <img src={servicioSeleccionado.imagen_url} className="w-16 h-16 rounded-xl object-cover" alt="S" />
+              <img src={servicioSeleccionado.imagen_url} className="w-16 h-16 rounded-xl object-cover shadow-sm" alt="S" />
               <div>
                 <h3 className="font-bold text-lg leading-tight">{servicioSeleccionado.nombre}</h3>
                 <p className="text-blue-600 font-black text-xl">
@@ -167,19 +167,21 @@ export default function PaginaLocal(props: { params: Promise<{ slug: string }> }
 
             <form onSubmit={procesarAgenda} className="p-8 space-y-4">
               <input required type="text" placeholder="Tu nombre" className="w-full border p-4 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500" value={nombre} onChange={e => setNombre(e.target.value)} />
-              <input required type="email" placeholder="Correo electrónico" className="w-full border p-4 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500" value={email} onChange={e => setEmail(e.target.value)} />
+              <input required type="email" placeholder="Email" className="w-full border p-4 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500" value={email} onChange={e => setEmail(e.target.value)} />
               <input required type="tel" placeholder="WhatsApp (+569...)" className="w-full border p-4 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500" value={telefono} onChange={e => setTelefono(e.target.value)} />
 
-              {/* Opción de Pago Anticipado */}
+              {/* Selector de Pago Online con Descuento */}
               <div className="pt-4">
-                <p className="text-xs font-bold text-gray-400 mb-2 uppercase">Método de pago</p>
+                <p className="text-xs font-bold text-gray-400 mb-2 uppercase tracking-widest">Método de pago</p>
                 <div 
                   onClick={() => setMetodoPago(metodoPago === 'presencial' ? 'online' : 'presencial')}
-                  className={`p-4 border-2 rounded-2xl cursor-pointer transition ${metodoPago === 'online' ? 'border-green-500 bg-green-50' : 'border-gray-100'}`}
+                  className={`p-4 border-2 rounded-2xl cursor-pointer transition-all ${metodoPago === 'online' ? 'border-green-500 bg-green-50' : 'border-gray-100 hover:border-blue-200'}`}
                 >
                   <div className="flex justify-between items-center">
                     <span className="font-bold text-sm">Pago Online (Dcto. Agéndalo)</span>
-                    <span className="text-green-600 font-bold">-{Math.round(servicioSeleccionado.precio * 0.1).toLocaleString('es-CL')}</span>
+                    <span className="text-green-600 font-bold">
+                      -{Math.round(servicioSeleccionado.precio * 0.1).toLocaleString('es-CL')}
+                    </span>
                   </div>
                 </div>
               </div>
