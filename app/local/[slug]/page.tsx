@@ -1,10 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation' // <--- CAMBIO CLAVE: Usamos el hook oficial
-// Intentamos usar el alias @/ para evitar errores de ../../../
-// SI ESTO MARCA ERROR, CAMBIALO POR: import { supabase } from '../../../../lib/supabase'
-import { supabase } from '@/lib/supabase' 
+// VOLVEMOS A LA RUTA RELATIVA SEGURA:
+import { supabase } from '../../../lib/supabase' 
+import { useParams } from 'next/navigation'
 import { 
   format, 
   startOfMonth, 
@@ -20,7 +19,6 @@ import {
 } from 'date-fns'
 import { es } from 'date-fns/locale'
 
-// Definimos las interfaces
 interface Local {
   nombre: string;
   foto_banner: string;
@@ -37,9 +35,11 @@ interface Servicio {
   imagen_url: string;
 }
 
-export default function PaginaLocal() { // <--- Quitamos props para evitar conflictos de tipo
-  const params = useParams(); // <--- Obtenemos el slug de forma segura
-  const slug = params?.slug as string; // Aseguramos que sea string
+// Eliminamos los tipos complejos de las props y usamos useParams
+export default function PaginaLocal() {
+  const params = useParams();
+  // Validación de seguridad por si params es null
+  const slug = params ? (params.slug as string) : '';
 
   const [local, setLocal] = useState<Local | null>(null);
   const [servicios, setServicios] = useState<Servicio[]>([]);
@@ -52,7 +52,6 @@ export default function PaginaLocal() { // <--- Quitamos props para evitar confl
   const [horaSeleccionada, setHoraSeleccionada] = useState('');
   const [bloquesOcupados, setBloquesOcupados] = useState<string[]>([]);
 
-  // Estados del formulario
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState(''); 
   const [telefonoInput, setTelefonoInput] = useState(''); 
@@ -60,22 +59,20 @@ export default function PaginaLocal() { // <--- Quitamos props para evitar confl
 
   const horarios = ["09:00", "10:00", "11:00", "12:00", "15:00", "16:00", "17:00", "18:00"];
 
-  // 1. Cargar datos
   useEffect(() => {
-    if (!slug) return; // Esperar a que el slug esté listo
+    if (!slug) return;
 
     async function cargar() {
       try {
         const { data: L, error: errorL } = await supabase.from('locales').select('*').eq('slug', slug).single();
         const { data: S, error: errorS } = await supabase.from('servicios').select('*').eq('local_slug', slug);
         
-        if (errorL) console.error("Error local:", errorL);
-        if (errorS) console.error("Error servicios:", errorS);
-
+        if (errorL) console.error("Error cargando local:", errorL);
+        
         if (L) setLocal(L as Local); 
         if (S) setServicios(S as Servicio[]);
       } catch (err) {
-        console.error("Error de carga:", err);
+        console.error("Error general:", err);
       } finally {
         setCargando(false);
       }
@@ -83,7 +80,6 @@ export default function PaginaLocal() { // <--- Quitamos props para evitar confl
     cargar();
   }, [slug]);
 
-  // 2. Revisar disponibilidad
   useEffect(() => {
     if (diaSeleccionado && slug) {
       async function consultar() {
@@ -95,13 +91,12 @@ export default function PaginaLocal() { // <--- Quitamos props para evitar confl
     }
   }, [diaSeleccionado, slug]);
 
-  // 3. Enviar
   const enviar = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!servicioSeleccionado || !diaSeleccionado || !horaSeleccionada) return;
 
     if (telefonoInput.length !== 8) {
-      alert("Por favor, ingresa los 8 dígitos de tu WhatsApp (sin el +569).");
+      alert("Por favor, ingresa los 8 dígitos de tu WhatsApp.");
       return;
     }
 
@@ -110,11 +105,10 @@ export default function PaginaLocal() { // <--- Quitamos props para evitar confl
       return;
     }
 
-    // A. Guardar en Supabase
     const { error } = await supabase.from('agendamientos').insert([{
       cliente_nombre: nombre, 
       cliente_email: email, 
-      cliente_telefono: `+569${telefonoInput}`,
+      cliente_telefono: `+569${telefonoInput}`, 
       servicio_id: servicioSeleccionado.id, 
       local: slug,
       fecha: format(diaSeleccionado as Date, 'yyyy-MM-dd'), 
@@ -122,12 +116,11 @@ export default function PaginaLocal() { // <--- Quitamos props para evitar confl
     }]);
     
     if (error) {
-      alert('Hubo un error al guardar. Revisa tu conexión.');
+      alert('Hubo un error al guardar. Inténtalo de nuevo.');
       console.error(error);
       return;
     }
 
-    // B. Enviar Correo (Resend)
     try {
       await fetch('/api/send', {
         method: 'POST',
@@ -147,7 +140,6 @@ export default function PaginaLocal() { // <--- Quitamos props para evitar confl
       console.error("Error enviando correo:", err);
     }
 
-    // C. Éxito
     alert(`¡Listo ${nombre}! Tu hora ha sido agendada y te enviamos un correo de confirmación.`); 
     setMostrarForm(false); 
     setNombre(''); setEmail(''); setTelefonoInput('');
@@ -211,6 +203,7 @@ export default function PaginaLocal() { // <--- Quitamos props para evitar confl
       {mostrarForm && servicioSeleccionado && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-[3rem] shadow-2xl overflow-hidden max-w-5xl w-full flex flex-col md:flex-row max-h-[90vh]">
+            
             <div className="p-8 border-r bg-gray-50/50 md:w-1/2 overflow-y-auto">
               <div className="mb-6">
                 <p className="text-blue-600 font-black uppercase text-[10px] tracking-widest mb-1">Paso 1</p>
@@ -219,15 +212,18 @@ export default function PaginaLocal() { // <--- Quitamos props para evitar confl
                   <span className="text-blue-600">{servicioSeleccionado.nombre} — ${servicioSeleccionado.precio.toLocaleString('es-CL')}</span>
                 </h3>
               </div>
+              
               <div className="bg-white p-6 rounded-3xl border mb-6 shadow-sm">
                 <div className="flex justify-between items-center mb-4 text-sm font-bold">
                   <button type="button" onClick={() => setMesActual(subMonths(mesActual, 1))} className="p-2 hover:bg-gray-100 rounded-lg">◀</button>
                   <span className="capitalize">{format(mesActual, 'MMMM yyyy', { locale: es })}</span>
                   <button type="button" onClick={() => setMesActual(addMonths(mesActual, 1))} className="p-2 hover:bg-gray-100 rounded-lg">▶</button>
                 </div>
+                
                 <div className="grid grid-cols-7 gap-1 text-center mb-2">
                   {['L','M','M','J','V','S','D'].map(d => <div key={d} className="text-[10px] font-bold text-gray-300 py-1">{d}</div>)}
                 </div>
+
                 <div className="grid grid-cols-7 gap-1 text-center">
                   {dias.map(dia => {
                     const esPasado = isBefore(dia, startOfDay(new Date()));
@@ -251,6 +247,7 @@ export default function PaginaLocal() { // <--- Quitamos props para evitar confl
                   })}
                 </div>
               </div>
+
               {diaSeleccionado && (
                 <div className="grid grid-cols-4 gap-2 animate-in fade-in slide-in-from-bottom-2">
                   {horarios.map(h => (
@@ -268,6 +265,7 @@ export default function PaginaLocal() { // <--- Quitamos props para evitar confl
                 </div>
               )}
             </div>
+
             <div className="p-8 md:w-1/2 flex flex-col justify-center bg-white overflow-y-auto">
               {!horaSeleccionada ? (
                 <div className="text-center py-20 text-gray-400 font-bold italic text-xs uppercase tracking-widest opacity-50 select-none">
@@ -282,8 +280,10 @@ export default function PaginaLocal() { // <--- Quitamos props para evitar confl
                       a las {horaSeleccionada} hrs
                     </p>
                   </div>
+                  
                   <input required placeholder="Nombre Completo" className="w-full border p-4 rounded-2xl outline-none bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all font-medium" value={nombre} onChange={e => setNombre(e.target.value)} />
                   <input required type="email" placeholder="Correo Electrónico" className="w-full border p-4 rounded-2xl outline-none bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all font-medium" value={email} onChange={e => setEmail(e.target.value)} />
+                  
                   <div className="relative group">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm select-none group-focus-within:text-blue-500 transition-colors">+56 9</span>
                     <input 
@@ -296,15 +296,18 @@ export default function PaginaLocal() { // <--- Quitamos props para evitar confl
                       onChange={e => setTelefonoInput(e.target.value.replace(/\D/g, ''))} 
                     />
                   </div>
+
                   <div onClick={() => setMetodoPago(metodoPago === 'presencial' ? 'online' : 'presencial')} className={`p-4 border-2 rounded-2xl cursor-pointer transition-all ${metodoPago === 'online' ? 'border-green-500 bg-green-50 shadow-inner' : 'border-gray-100 hover:border-blue-200 hover:bg-gray-50'}`}>
                     <div className="flex justify-between items-center text-[10px] font-black uppercase">
                       <span className={metodoPago === 'online' ? 'text-green-700' : 'text-gray-400'}>Pago Online (-10%)</span>
                       <span className="text-green-600 text-sm">-${Math.round(servicioSeleccionado.precio * 0.1).toLocaleString('es-CL')}</span>
                     </div>
                   </div>
+
                   <button type="submit" className="w-full bg-blue-600 text-white py-5 rounded-2xl font-black shadow-xl hover:bg-blue-700 hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-widest text-sm">
                     {metodoPago === 'online' ? 'Ir a Pagar' : 'Confirmar Agenda'}
                   </button>
+                  
                   <button type="button" onClick={() => setMostrarForm(false)} className="w-full text-gray-400 text-[10px] font-black pt-4 uppercase tracking-[0.2em] text-center hover:text-red-500 transition-colors">
                     Cancelar
                   </button>
