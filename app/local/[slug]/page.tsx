@@ -80,12 +80,16 @@ export default function PaginaLocal(props: { params: Promise<{ slug: string }> }
   return (
     <main className="min-h-screen bg-white font-sans">
       {/* Banner Superior */}
-      <div className="h-64 md:h-80 bg-gray-900 relative">
-        <img src={local.foto_banner} className="w-full h-full object-cover opacity-60" alt="Banner" />
-        <div className="absolute inset-0 flex items-center justify-center">
-          <h1 className="text-white text-4xl md:text-6xl font-black uppercase text-center">{local.nombre}</h1>
-        </div>
-      </div>
+      {/* Banner con respaldo de color si no hay imagen */}
+<div className="h-64 md:h-80 bg-gradient-to-r from-blue-600 to-blue-800 relative">
+  {local.foto_banner && (
+    <img 
+      src={local.foto_banner} 
+      className="w-full h-full object-cover opacity-60" 
+      alt="Banner" 
+    />
+  )}
+</div>
 
       {/* Lista de Servicios */}
       <div className="max-w-4xl mx-auto px-6 py-10">
