@@ -8,8 +8,8 @@ interface Local {
   foto_banner: string;
   google_maps_url?: string;
   telefono?: string;
-  direccion?: string; // Nueva columna
-  descripcion?: string; // Nueva columna
+  direccion?: string;
+  descripcion?: string;
 }
 
 interface Servicio {
@@ -74,7 +74,7 @@ export default function PaginaLocal(props: { params: Promise<{ slug: string }> }
 
   return (
     <main className="min-h-screen bg-white font-sans text-gray-900">
-      {/* Banner */}
+      {/* Banner con Título */}
       <div className="h-64 md:h-80 bg-blue-900 relative">
         <img src={local.foto_banner || 'https://images.unsplash.com/photo-1521737711867-e3b97375f902?w=1200'} className="w-full h-full object-cover opacity-60" alt="Banner" />
         <div className="absolute inset-0 flex items-center justify-center">
@@ -83,21 +83,33 @@ export default function PaginaLocal(props: { params: Promise<{ slug: string }> }
       </div>
 
       <div className="max-w-4xl mx-auto px-6 py-10">
-        {/* INFO DEL LOCAL: Dirección, Teléfono y Descripción */}
+        {/* INFO DEL LOCAL: Descripción, Dirección (con botón Maps) y Teléfono */}
         <div className="text-center mb-12">
-          <p className="text-lg text-gray-600 italic mb-6 max-w-2xl mx-auto">
-            "{local.descripcion || 'Bienvenidos a nuestro local, donde la calidad es nuestra prioridad.'}"
+          <p className="text-lg text-gray-600 italic mb-8 max-w-2xl mx-auto">
+            "{local.descripcion || 'Bienvenidos a nuestro local.'}"
           </p>
           
-          <div className="flex flex-wrap justify-center gap-4">
+          <div className="flex flex-col items-center gap-6">
+            {/* Bloque de Dirección + Botón Maps */}
             {local.direccion && (
-              <div className="flex items-center gap-2 bg-gray-100 text-gray-800 px-6 py-3 rounded-2xl font-semibold">
-                📍 {local.direccion}
+              <div className="flex flex-col md:flex-row items-center gap-3 bg-gray-50 p-2 pl-6 rounded-3xl border border-gray-100">
+                <span className="text-gray-700 font-medium">📍 {local.direccion}</span>
+                {local.google_maps_url && (
+                  <a 
+                    href={local.google_maps_url} 
+                    target="_blank" 
+                    className="bg-white text-blue-600 border border-blue-100 px-4 py-2 rounded-2xl font-bold text-sm hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                  >
+                    Cómo llegar
+                  </a>
+                )}
               </div>
             )}
+
+            {/* Botón de Teléfono */}
             {local.telefono && (
-              <a href={`tel:${local.telefono}`} className="flex items-center gap-2 bg-blue-50 text-blue-700 px-6 py-3 rounded-2xl font-bold">
-                📞 {local.telefono}
+              <a href={`tel:${local.telefono}`} className="flex items-center gap-2 bg-blue-50 text-blue-700 px-8 py-3 rounded-full font-bold hover:bg-blue-100 transition">
+                📞 Llamar al {local.telefono}
               </a>
             )}
           </div>
@@ -137,13 +149,13 @@ export default function PaginaLocal(props: { params: Promise<{ slug: string }> }
                 <span className="text-xl font-black text-blue-600">${servicioSeleccionado.precio.toLocaleString('es-CL')}</span>
               </div>
 
-              <input required type="text" placeholder="Nombre completo" className="w-full border p-4 rounded-2xl outline-none" value={nombre} onChange={e => setNombre(e.target.value)} />
-              <input required type="email" placeholder="Email" className="w-full border p-4 rounded-2xl outline-none" value={email} onChange={e => setEmail(e.target.value)} />
-              <input required type="tel" placeholder="WhatsApp" className="w-full border p-4 rounded-2xl outline-none" value={telefono} onChange={e => setTelefono(e.target.value)} />
+              <input required type="text" placeholder="Nombre completo" className="w-full border p-4 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500" value={nombre} onChange={e => setNombre(e.target.value)} />
+              <input required type="email" placeholder="Email" className="w-full border p-4 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500" value={email} onChange={e => setEmail(e.target.value)} />
+              <input required type="tel" placeholder="WhatsApp" className="w-full border p-4 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500" value={telefono} onChange={e => setTelefono(e.target.value)} />
 
               <div className="pt-4">
-                <p className="text-xs font-bold text-gray-400 mb-2 uppercase">Seleccione método de pago</p>
-                <div onClick={() => setMetodoPago(metodoPago === 'presencial' ? 'online' : 'presencial')} className={`p-4 border-2 rounded-2xl cursor-pointer transition ${metodoPago === 'online' ? 'border-green-500 bg-green-50' : 'border-gray-100'}`}>
+                <p className="text-xs font-bold text-gray-400 mb-2 uppercase tracking-tight">Método de pago preferido</p>
+                <div onClick={() => setMetodoPago(metodoPago === 'presencial' ? 'online' : 'presencial')} className={`p-4 border-2 rounded-2xl cursor-pointer transition ${metodoPago === 'online' ? 'border-green-500 bg-green-50' : 'border-gray-100 hover:border-blue-100'}`}>
                   <div className="flex justify-between items-center">
                     <span className="font-bold text-sm">Pago Online (Dcto. Agéndalo)</span>
                     <span className="text-green-600 font-bold">-{Math.round(servicioSeleccionado.precio * 0.1).toLocaleString('es-CL')}</span>
@@ -153,7 +165,7 @@ export default function PaginaLocal(props: { params: Promise<{ slug: string }> }
 
               <div className="flex gap-2 pt-6">
                 <button type="button" onClick={() => setMostrarForm(false)} className="flex-1 bg-gray-100 py-4 rounded-2xl font-bold text-gray-500">Volver</button>
-                <button type="submit" className="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-bold">
+                <button type="submit" className="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-blue-200">
                   {metodoPago === 'online' ? 'Ir a pagar' : 'Confirmar Cita'}
                 </button>
               </div>
