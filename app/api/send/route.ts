@@ -31,9 +31,9 @@ export async function POST(request: Request) {
             <div style="background-color: #10B981; padding: 30px; text-align: center;">
               <table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin: 0 auto;">
                 <tr>
-                  <td style="background: white; width: 60px; height: 60px; border-radius: 50%; text-align: center; vertical-align: middle;">
-                     <span style="font-size: 30px; line-height: 1;">✔</span>
-                  </td>
+                  <td style="background: white; width: 80px; height: 80px; border-radius: 50%; text-align: center; vertical-align: middle; padding: 10px;">
+    <img src="https://agendalotalca.cl/logos/logo-agendalo.png" width="60" height="60" alt="Agéndalo" style="display: block; margin: 0 auto;" />
+</td>
                 </tr>
               </table>
               <h1 style="color: white; margin: 15px 0 0; font-size: 24px; font-weight: bold;">¡Reserva Exitosa!</h1>
