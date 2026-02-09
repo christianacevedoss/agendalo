@@ -1,7 +1,10 @@
 'use client'
 
-import { useState, useEffect, use } from 'react'
-import { supabase } from '../../../lib/supabase'
+import { useState, useEffect } from 'react'
+import { useParams } from 'next/navigation' // <--- CAMBIO CLAVE: Usamos el hook oficial
+// Intentamos usar el alias @/ para evitar errores de ../../../
+// SI ESTO MARCA ERROR, CAMBIALO POR: import { supabase } from '../../../../lib/supabase'
+import { supabase } from '@/lib/supabase' 
 import { 
   format, 
   startOfMonth, 
@@ -17,6 +20,7 @@ import {
 } from 'date-fns'
 import { es } from 'date-fns/locale'
 
+// Definimos las interfaces
 interface Local {
   nombre: string;
   foto_banner: string;
@@ -33,9 +37,10 @@ interface Servicio {
   imagen_url: string;
 }
 
-export default function PaginaLocal(props: { params: Promise<{ slug: string }> }) {
-  const params = use(props.params);
-  
+export default function PaginaLocal() { // <--- Quitamos props para evitar conflictos de tipo
+  const params = useParams(); // <--- Obtenemos el slug de forma segura
+  const slug = params?.slug as string; // Aseguramos que sea string
+
   const [local, setLocal] = useState<Local | null>(null);
   const [servicios, setServicios] = useState<Servicio[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -55,36 +60,46 @@ export default function PaginaLocal(props: { params: Promise<{ slug: string }> }
 
   const horarios = ["09:00", "10:00", "11:00", "12:00", "15:00", "16:00", "17:00", "18:00"];
 
-  // 1. Cargar datos del Local y Servicios
+  // 1. Cargar datos
   useEffect(() => {
+    if (!slug) return; // Esperar a que el slug esté listo
+
     async function cargar() {
-      const { data: L } = await supabase.from('locales').select('*').eq('slug', params.slug).single();
-      const { data: S } = await supabase.from('servicios').select('*').eq('local_slug', params.slug);
-      if (L) setLocal(L as Local); 
-      if (S) setServicios(S as Servicio[]);
-      setCargando(false);
+      try {
+        const { data: L, error: errorL } = await supabase.from('locales').select('*').eq('slug', slug).single();
+        const { data: S, error: errorS } = await supabase.from('servicios').select('*').eq('local_slug', slug);
+        
+        if (errorL) console.error("Error local:", errorL);
+        if (errorS) console.error("Error servicios:", errorS);
+
+        if (L) setLocal(L as Local); 
+        if (S) setServicios(S as Servicio[]);
+      } catch (err) {
+        console.error("Error de carga:", err);
+      } finally {
+        setCargando(false);
+      }
     }
     cargar();
-  }, [params.slug]);
+  }, [slug]);
 
-  // 2. Revisar disponibilidad cuando se selecciona un día
+  // 2. Revisar disponibilidad
   useEffect(() => {
-    if (diaSeleccionado) {
+    if (diaSeleccionado && slug) {
       async function consultar() {
         const fechaFmt = format(diaSeleccionado as Date, 'yyyy-MM-dd');
-        const { data } = await supabase.from('agendamientos').select('hora').eq('fecha', fechaFmt).eq('local', params.slug);
+        const { data } = await supabase.from('agendamientos').select('hora').eq('fecha', fechaFmt).eq('local', slug);
         setBloquesOcupados(data?.map(d => d.hora) || []);
       }
       consultar();
     }
-  }, [diaSeleccionado, params.slug]);
+  }, [diaSeleccionado, slug]);
 
-  // 3. Función Principal: Guardar y Enviar Correo
+  // 3. Enviar
   const enviar = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!servicioSeleccionado || !diaSeleccionado || !horaSeleccionada) return;
 
-    // Validación: Teléfono debe tener 8 dígitos
     if (telefonoInput.length !== 8) {
       alert("Por favor, ingresa los 8 dígitos de tu WhatsApp (sin el +569).");
       return;
@@ -99,20 +114,20 @@ export default function PaginaLocal(props: { params: Promise<{ slug: string }> }
     const { error } = await supabase.from('agendamientos').insert([{
       cliente_nombre: nombre, 
       cliente_email: email, 
-      cliente_telefono: `+569${telefonoInput}`, // Formato internacional para BD
+      cliente_telefono: `+569${telefonoInput}`,
       servicio_id: servicioSeleccionado.id, 
-      local: params.slug,
+      local: slug,
       fecha: format(diaSeleccionado as Date, 'yyyy-MM-dd'), 
       hora: horaSeleccionada
     }]);
     
     if (error) {
-      alert('Hubo un error al guardar. Inténtalo de nuevo.');
+      alert('Hubo un error al guardar. Revisa tu conexión.');
       console.error(error);
       return;
     }
 
-    // B. Enviar Correo de Confirmación (Resend)
+    // B. Enviar Correo (Resend)
     try {
       await fetch('/api/send', {
         method: 'POST',
@@ -139,27 +154,22 @@ export default function PaginaLocal(props: { params: Promise<{ slug: string }> }
     setDiaSeleccionado(null); setHoraSeleccionada('');
   };
 
-  // Generar calendario (Semana empieza Lunes)
   const dias = eachDayOfInterval({ 
     start: startOfWeek(startOfMonth(mesActual), { weekStartsOn: 1 }), 
     end: endOfWeek(endOfMonth(mesActual), { weekStartsOn: 1 }) 
   });
 
-  if (cargando) return <div className="min-h-screen flex items-center justify-center font-bold text-blue-600 animate-pulse uppercase tracking-widest">Cargando Agéndalo...</div>;
+  if (cargando) return <div className="min-h-screen flex items-center justify-center font-bold text-blue-600 animate-pulse uppercase tracking-widest">Cargando...</div>;
   if (!local) return <div className="min-h-screen flex items-center justify-center font-bold text-red-500">Local no encontrado</div>;
 
   return (
     <main className="min-h-screen bg-white font-sans text-gray-900 pb-20">
-      
-      {/* Banner */}
       <div className="h-64 bg-blue-900 relative flex items-center justify-center text-white text-center">
         <img src={local.foto_banner} className="absolute inset-0 w-full h-full object-cover opacity-40" alt="" />
         <h1 className="relative text-4xl md:text-6xl font-black uppercase tracking-tighter px-4 drop-shadow-lg">{local.nombre}</h1>
       </div>
 
       <div className="max-w-4xl mx-auto p-6">
-        
-        {/* Info Card */}
         <div className="text-center mb-12 -mt-10 relative z-10">
           <div className="bg-white shadow-xl rounded-3xl p-6 border border-gray-100 inline-block max-w-full">
             <p className="text-gray-500 italic mb-4">"{local.descripcion}"</p>
@@ -179,7 +189,6 @@ export default function PaginaLocal(props: { params: Promise<{ slug: string }> }
           </div>
         </div>
 
-        {/* Lista de Servicios */}
         <h2 className="text-2xl font-black mb-6 uppercase tracking-tight">Servicios</h2>
         <div className="grid gap-4">
           {servicios.map(s => (
@@ -199,12 +208,9 @@ export default function PaginaLocal(props: { params: Promise<{ slug: string }> }
         </div>
       </div>
 
-      {/* MODAL DE RESERVA */}
       {mostrarForm && servicioSeleccionado && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-[3rem] shadow-2xl overflow-hidden max-w-5xl w-full flex flex-col md:flex-row max-h-[90vh]">
-            
-            {/* COLUMNA IZQUIERDA: CALENDARIO */}
             <div className="p-8 border-r bg-gray-50/50 md:w-1/2 overflow-y-auto">
               <div className="mb-6">
                 <p className="text-blue-600 font-black uppercase text-[10px] tracking-widest mb-1">Paso 1</p>
@@ -213,19 +219,15 @@ export default function PaginaLocal(props: { params: Promise<{ slug: string }> }
                   <span className="text-blue-600">{servicioSeleccionado.nombre} — ${servicioSeleccionado.precio.toLocaleString('es-CL')}</span>
                 </h3>
               </div>
-              
               <div className="bg-white p-6 rounded-3xl border mb-6 shadow-sm">
                 <div className="flex justify-between items-center mb-4 text-sm font-bold">
                   <button type="button" onClick={() => setMesActual(subMonths(mesActual, 1))} className="p-2 hover:bg-gray-100 rounded-lg">◀</button>
                   <span className="capitalize">{format(mesActual, 'MMMM yyyy', { locale: es })}</span>
                   <button type="button" onClick={() => setMesActual(addMonths(mesActual, 1))} className="p-2 hover:bg-gray-100 rounded-lg">▶</button>
                 </div>
-                
-                {/* Días de la semana (Lunes a Domingo) */}
                 <div className="grid grid-cols-7 gap-1 text-center mb-2">
                   {['L','M','M','J','V','S','D'].map(d => <div key={d} className="text-[10px] font-bold text-gray-300 py-1">{d}</div>)}
                 </div>
-
                 <div className="grid grid-cols-7 gap-1 text-center">
                   {dias.map(dia => {
                     const esPasado = isBefore(dia, startOfDay(new Date()));
@@ -249,7 +251,6 @@ export default function PaginaLocal(props: { params: Promise<{ slug: string }> }
                   })}
                 </div>
               </div>
-
               {diaSeleccionado && (
                 <div className="grid grid-cols-4 gap-2 animate-in fade-in slide-in-from-bottom-2">
                   {horarios.map(h => (
@@ -267,8 +268,6 @@ export default function PaginaLocal(props: { params: Promise<{ slug: string }> }
                 </div>
               )}
             </div>
-
-            {/* COLUMNA DERECHA: FORMULARIO */}
             <div className="p-8 md:w-1/2 flex flex-col justify-center bg-white overflow-y-auto">
               {!horaSeleccionada ? (
                 <div className="text-center py-20 text-gray-400 font-bold italic text-xs uppercase tracking-widest opacity-50 select-none">
@@ -283,10 +282,8 @@ export default function PaginaLocal(props: { params: Promise<{ slug: string }> }
                       a las {horaSeleccionada} hrs
                     </p>
                   </div>
-                  
                   <input required placeholder="Nombre Completo" className="w-full border p-4 rounded-2xl outline-none bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all font-medium" value={nombre} onChange={e => setNombre(e.target.value)} />
                   <input required type="email" placeholder="Correo Electrónico" className="w-full border p-4 rounded-2xl outline-none bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all font-medium" value={email} onChange={e => setEmail(e.target.value)} />
-                  
                   <div className="relative group">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm select-none group-focus-within:text-blue-500 transition-colors">+56 9</span>
                     <input 
@@ -299,18 +296,15 @@ export default function PaginaLocal(props: { params: Promise<{ slug: string }> }
                       onChange={e => setTelefonoInput(e.target.value.replace(/\D/g, ''))} 
                     />
                   </div>
-
                   <div onClick={() => setMetodoPago(metodoPago === 'presencial' ? 'online' : 'presencial')} className={`p-4 border-2 rounded-2xl cursor-pointer transition-all ${metodoPago === 'online' ? 'border-green-500 bg-green-50 shadow-inner' : 'border-gray-100 hover:border-blue-200 hover:bg-gray-50'}`}>
                     <div className="flex justify-between items-center text-[10px] font-black uppercase">
                       <span className={metodoPago === 'online' ? 'text-green-700' : 'text-gray-400'}>Pago Online (-10%)</span>
                       <span className="text-green-600 text-sm">-${Math.round(servicioSeleccionado.precio * 0.1).toLocaleString('es-CL')}</span>
                     </div>
                   </div>
-
                   <button type="submit" className="w-full bg-blue-600 text-white py-5 rounded-2xl font-black shadow-xl hover:bg-blue-700 hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-widest text-sm">
                     {metodoPago === 'online' ? 'Ir a Pagar' : 'Confirmar Agenda'}
                   </button>
-                  
                   <button type="button" onClick={() => setMostrarForm(false)} className="w-full text-gray-400 text-[10px] font-black pt-4 uppercase tracking-[0.2em] text-center hover:text-red-500 transition-colors">
                     Cancelar
                   </button>
