@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   title: "Agendalo Talca",
   description: "La plataforma de reservas de los mejores locales de Talca",
   icons: {
-    icon: '/favicon.ico.png', // O el nombre exacto que le pusiste en /public
+    icon: '/favicon.ico.png', // O el nombre exacto que le pusiste en /public !!
   },
 };
 
