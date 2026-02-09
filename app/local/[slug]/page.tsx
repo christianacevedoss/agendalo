@@ -154,9 +154,20 @@ export default function PaginaLocal() {
   if (cargando) return <div className="min-h-screen flex items-center justify-center font-bold text-blue-600 animate-pulse uppercase tracking-widest">Cargando...</div>;
   if (!local) return <div className="min-h-screen flex items-center justify-center font-bold text-red-500">Local no encontrado</div>;
 
-  return (
-    <main className="min-h-screen bg-white font-sans text-gray-900 pb-20">
+return (
+    // 1. AGREGA 'relative' AL FINAL DE LAS CLASES AQUÍ:
+    <main className="min-h-screen bg-white font-sans text-gray-900 pb-20 relative">
       
+      {/* 2. PEGA EL LOGO AQUÍ (NUEVO) */}
+      <div className="absolute top-4 left-4 z-20">
+        <div className="bg-white/90 backdrop-blur-sm p-2 rounded-2xl shadow-lg border border-white/50">
+           <img 
+             src="/logos/logo-agendalo.png" 
+             alt="Logo Agéndalo" 
+             className="w-12 h-12 object-contain" 
+           />
+        </div>
+      </div>
       {/* MENSAJE DE ÉXITO */}
       {reservaExitosa && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-[60] animate-in fade-in duration-300">
@@ -242,9 +253,11 @@ export default function PaginaLocal() {
               <div className="mb-6">
                 <p className="text-blue-600 font-black uppercase text-[10px] tracking-widest mb-1">Paso 1: Elige Fecha</p>
                 <h3 className="text-xl font-bold leading-tight tracking-tight text-gray-800">
-                  Reserva para: <br/>
-                  <span className="text-blue-600">{servicioSeleccionado.nombre}</span>
-                </h3>
+  Reserva para: <br/>
+  <span className="text-blue-600">
+    {servicioSeleccionado.nombre} — ${servicioSeleccionado.precio.toLocaleString('es-CL')}
+  </span>
+</h3>
               </div>
               
               <div className="bg-white p-4 md:p-6 rounded-3xl border mb-6 shadow-sm">
