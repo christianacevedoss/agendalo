@@ -371,9 +371,9 @@ export default function PaginaLocal() {
                   </button>
                   
                   <button type="button" onClick={() => setMostrarForm(false)} className="w-full text-gray-400 text-[10px] font-black pt-4 uppercase tracking-[0.2em] text-center hover:text-red-500 transition-colors">
-                    Cancelar
+                    Cancelar 
                   </button>
-                </form>
+                </form> 
               )}
             </div>
           </div>
