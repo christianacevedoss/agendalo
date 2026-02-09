@@ -74,7 +74,6 @@ export default function PaginaLocal(props: { params: Promise<{ slug: string }> }
     }
   }, [diaSeleccionado, params.slug]);
 
-  // Cálculo de precios
   const descuento = servicioSeleccionado ? Math.round(servicioSeleccionado.precio * 0.1) : 0;
   const precioFinal = servicioSeleccionado ? (metodoPago === 'online' ? servicioSeleccionado.precio - descuento : servicioSeleccionado.precio) : 0;
 
@@ -82,13 +81,11 @@ export default function PaginaLocal(props: { params: Promise<{ slug: string }> }
     e.preventDefault();
     if (!servicioSeleccionado || !diaSeleccionado || !horaSeleccionada) return;
 
-    // Si es pago online, redirigimos
     if (metodoPago === 'online') {
-      window.location.href = "https://www.mercadopago.cl"; // Aquí pondrás tu link de pago real después
+      window.location.href = "https://www.mercadopago.cl"; 
       return;
     }
 
-    // Si es presencial, guardamos
     const { error } = await supabase.from('agendamientos').insert([{
       cliente_nombre: nombre, 
       cliente_email: email, 
@@ -113,50 +110,70 @@ export default function PaginaLocal(props: { params: Promise<{ slug: string }> }
 
   return (
     <main className="min-h-screen bg-white font-sans text-gray-900 pb-20">
+      {/* Banner */}
       <div className="h-64 bg-blue-900 relative flex items-center justify-center text-white">
         <img src={local.foto_banner} className="absolute inset-0 w-full h-full object-cover opacity-40" alt="" />
-        <h1 className="relative text-4xl md:text-6xl font-black uppercase tracking-tighter">{local.nombre}</h1>
+        <h1 className="relative text-4xl md:text-6xl font-black uppercase tracking-tighter text-center px-4">{local.nombre}</h1>
       </div>
 
       <div className="max-w-4xl mx-auto p-6">
+        {/* Info Local */}
         <div className="text-center mb-12 -mt-10 relative z-10">
           <div className="bg-white shadow-xl rounded-3xl p-6 border border-gray-100 inline-block max-w-full">
             <p className="text-gray-500 italic mb-4">"{local.descripcion}"</p>
             <div className="flex flex-wrap justify-center gap-4">
               <div className="flex items-center gap-2 bg-gray-50 px-4 py-2 rounded-xl border">
                 <span className="text-sm font-bold text-gray-700">📍 {local.direccion}</span>
-                {local.google_maps_url && (
-                  <a href={local.google_maps_url} target="_blank" className="bg-blue-600 text-white text-[10px] px-2 py-1 rounded-lg font-black uppercase">Ver Mapa</a>
-                )}
               </div>
               <a href={`tel:${local.telefono}`} className="bg-blue-50 text-blue-700 px-4 py-2 rounded-xl font-bold text-sm">📞 {local.telefono}</a>
             </div>
           </div>
         </div>
 
-        <h2 className="text-2xl font-black mb-6 uppercase">Servicios</h2>
-        <div className="grid gap-4">
+        {/* MAPA DE GOOGLE INTEGRADO */}
+        {local.google_maps_url && (
+          <div className="mb-12 rounded-[2rem] overflow-hidden border-4 border-gray-50 shadow-inner h-64 w-full">
+            <iframe 
+              width="100%" 
+              height="100%" 
+              style={{ border: 0 }} 
+              loading="lazy" 
+              allowFullScreen 
+              referrerPolicy="no-referrer-when-downgrade"
+              src={`https://www.google.com/maps/embed/v1/place?key=TU_API_KEY_AQUI&q=${encodeURIComponent(local.direccion + " " + local.nombre)}`}
+            ></iframe>
+            {/* Nota: Si no tienes API Key de Maps, el link directo también funciona muy bien abajo: */}
+            <div className="bg-gray-50 p-3 text-center">
+              <a href={local.google_maps_url} target="_blank" className="text-blue-600 font-bold text-xs uppercase tracking-widest">Abrir en App de Mapas ↗</a>
+            </div>
+          </div>
+        )}
+
+        <h2 className="text-2xl font-black mb-6 uppercase tracking-tight">Nuestros Servicios</h2>
+        <div className="grid gap-4 mb-12">
           {servicios.map(s => (
-            <div key={s.id} className="border-2 border-gray-50 p-6 rounded-[2rem] flex justify-between items-center bg-white shadow-sm">
+            <div key={s.id} className="border-2 border-gray-50 p-6 rounded-[2rem] flex justify-between items-center bg-white shadow-sm hover:border-blue-500 transition-all">
               <div>
                 <h3 className="font-bold text-xl">{s.nombre}</h3>
                 <p className="text-blue-600 font-black text-2xl">${s.precio.toLocaleString('es-CL')}</p>
               </div>
-              <button onClick={() => { setServicioSeleccionado(s); setMostrarForm(true); }} className="bg-black text-white px-8 py-3 rounded-2xl font-bold">Agendar</button>
+              <button onClick={() => { setServicioSeleccionado(s); setMostrarForm(true); }} className="bg-black text-white px-8 py-3 rounded-2xl font-bold hover:bg-blue-600 transition">Agendar</button>
             </div>
           ))}
         </div>
       </div>
 
+      {/* Modal ... (resto del código del modal igual al anterior) */}
       {mostrarForm && servicioSeleccionado && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-[3rem] shadow-2xl overflow-hidden max-w-5xl w-full flex flex-col md:flex-row max-h-[90vh]">
+           {/* ... Contenido del modal de 2 columnas enviado anteriormente ... */}
+           {/* Asegúrate de mantener la lógica del botón dinámico y el resumen de precio */}
+           <div className="bg-white rounded-[3rem] shadow-2xl overflow-hidden max-w-5xl w-full flex flex-col md:flex-row max-h-[90vh]">
             
             {/* IZQUIERDA: CALENDARIO */}
             <div className="p-8 border-r bg-gray-50/50 md:w-1/2 overflow-y-auto">
               <div className="mb-6">
                 <p className="text-blue-600 font-black uppercase text-xs mb-1">Paso 1</p>
-                {/* Agregado el valor del servicio aquí */}
                 <h3 className="text-xl font-bold leading-tight">Usted está agendando: <br/><span className="text-blue-600">{servicioSeleccionado.nombre} — ${servicioSeleccionado.precio.toLocaleString('es-CL')}</span></h3>
               </div>
               
@@ -198,7 +215,7 @@ export default function PaginaLocal(props: { params: Promise<{ slug: string }> }
               {!horaSeleccionada ? (
                 <div className="text-center py-20 text-gray-400 font-bold italic">Seleccione fecha y hora para continuar...</div>
               ) : (
-                <form onSubmit={enviar} className="space-y-4 animate-in slide-in-from-right-4 duration-500">
+                <form onSubmit={enviar} className="space-y-4">
                   <div className="bg-green-50 p-5 rounded-2xl border border-green-100 mb-2">
                     <p className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-1">Tu selección</p>
                     <p className="font-bold text-green-900 leading-tight">
@@ -218,11 +235,10 @@ export default function PaginaLocal(props: { params: Promise<{ slug: string }> }
                     </div>
                   </div>
 
-                  {/* Botón dinámico */}
                   <button type="submit" className={`w-full py-5 rounded-2xl font-black shadow-xl transition-all hover:scale-[1.02] ${metodoPago === 'online' ? 'bg-green-600 hover:bg-green-700 text-white shadow-green-100' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-100'}`}>
                     {metodoPago === 'online' ? `IR A PAGAR $${precioFinal.toLocaleString('es-CL')}` : 'CONFIRMAR AGENDA'}
                   </button>
-                  <button type="button" onClick={() => setMostrarForm(false)} className="w-full text-gray-400 text-xs font-bold pt-2 uppercase tracking-widest">Cancelar</button>
+                  <button type="button" onClick={() => setMostrarForm(false)} className="w-full text-gray-400 text-xs font-bold pt-2 uppercase tracking-widest text-center">Cancelar</button>
                 </form>
               )}
             </div>
