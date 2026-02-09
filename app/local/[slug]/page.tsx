@@ -1,5 +1,17 @@
 import { supabase } from '../../../lib/supabase' // Subimos 3 niveles: [slug] -> local -> app
 
+
+// Esto cambia el título de la pestaña según el local
+export async function generateMetadata({ params }: { params: { slug: string } }) {
+  // Aquí podrías incluso buscar el nombre real en Supabase, 
+  // pero por ahora usemos el slug formateado.
+  const nombre = params.slug.replace('-', ' ').toUpperCase();
+  
+  return {
+    title: `${nombre} | Agéndalo Talca`,
+  };
+}
+
 export const dynamic = 'force-dynamic'
 
 export default async function PaginaLocal({ params }: { params: { slug: string } }) {
