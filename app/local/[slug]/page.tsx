@@ -42,9 +42,8 @@ export default function PaginaLocal() {
   const [servicios, setServicios] = useState<Servicio[]>([]);
   const [cargando, setCargando] = useState(true);
   
-  // Estados de interfaz
   const [mostrarForm, setMostrarForm] = useState(false);
-  const [reservaExitosa, setReservaExitosa] = useState(false); // <--- NUEVO ESTADO
+  const [reservaExitosa, setReservaExitosa] = useState(false);
   
   const [servicioSeleccionado, setServicioSeleccionado] = useState<Servicio | null>(null);
   const [mesActual, setMesActual] = useState(new Date());
@@ -61,7 +60,6 @@ export default function PaginaLocal() {
 
   useEffect(() => {
     if (!slug) return;
-
     async function cargar() {
       try {
         const { data: L } = await supabase.from('locales').select('*').eq('slug', slug).single();
@@ -117,7 +115,6 @@ export default function PaginaLocal() {
       return;
     }
 
-    // Enviamos el correo con los NUEVOS DATOS (Dirección y Mapa)
     try {
       await fetch('/api/send', {
         method: 'POST',
@@ -131,17 +128,16 @@ export default function PaginaLocal() {
           hora: horaSeleccionada,
           localNombre: local?.nombre || 'Local',
           telefonoLocal: local?.telefono_local || 'Contacto',
-          direccionLocal: local?.direccion || '', // <--- Enviamos la dirección
-          mapsUrl: local?.maps_url || '#'         // <--- Enviamos el link del mapa
+          direccionLocal: local?.direccion || '',
+          mapsUrl: local?.maps_url || '#'
         })
       });
     } catch (err: any) {
       console.error("Error enviando correo:", err);
     }
 
-    // EN LUGAR DE ALERT, MOSTRAMOS LA PANTALLA DE ÉXITO
     setMostrarForm(false); 
-    setReservaExitosa(true); // <--- Activamos el mensaje bonito
+    setReservaExitosa(true);
   };
 
   const cerrarTodo = () => {
@@ -161,7 +157,7 @@ export default function PaginaLocal() {
   return (
     <main className="min-h-screen bg-white font-sans text-gray-900 pb-20">
       
-      {/* MENSAJE DE ÉXITO BONITO (Overlay) */}
+      {/* MENSAJE DE ÉXITO */}
       {reservaExitosa && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-[60] animate-in fade-in duration-300">
           <div className="bg-white rounded-[2rem] p-8 max-w-md w-full text-center shadow-2xl transform transition-all scale-100">
@@ -227,21 +223,31 @@ export default function PaginaLocal() {
         </div>
       </div>
 
+      {/* MODAL PRINCIPAL */}
       {mostrarForm && servicioSeleccionado && !reservaExitosa && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-[3rem] shadow-2xl overflow-hidden max-w-5xl w-full flex flex-col md:flex-row max-h-[90vh]">
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-0 md:p-4 z-50">
+          <div className="bg-white md:rounded-[3rem] shadow-2xl overflow-hidden max-w-5xl w-full h-full md:h-auto md:max-h-[90vh] flex flex-col md:flex-row">
             
-            <div className="p-8 border-r bg-gray-50/50 md:w-1/2 overflow-y-auto">
-              {/* (Contenido del calendario igual que antes...) */}
+            {/* --- COLUMNA IZQUIERDA: CALENDARIO --- 
+                Lógica Mobile: Si NO hay hora seleccionada, se muestra (block). Si SÍ hay hora, se oculta (hidden).
+                Lógica Desktop: Siempre se muestra (md:block).
+            */}
+            <div className={`p-6 md:p-8 border-r bg-gray-50/50 md:w-1/2 overflow-y-auto ${horaSeleccionada ? 'hidden md:block' : 'block'}`}>
+              
+              {/* Botón Cerrar (Solo Mobile) */}
+              <button onClick={() => setMostrarForm(false)} className="md:hidden mb-4 text-gray-400 font-bold text-sm">
+                ✕ CERRAR
+              </button>
+
               <div className="mb-6">
-                <p className="text-blue-600 font-black uppercase text-[10px] tracking-widest mb-1">Paso 1</p>
+                <p className="text-blue-600 font-black uppercase text-[10px] tracking-widest mb-1">Paso 1: Elige Fecha</p>
                 <h3 className="text-xl font-bold leading-tight tracking-tight text-gray-800">
-                  Estás reservando tu hora para: <br/>
-                  <span className="text-blue-600">{servicioSeleccionado.nombre} — ${servicioSeleccionado.precio.toLocaleString('es-CL')}</span>
+                  Reserva para: <br/>
+                  <span className="text-blue-600">{servicioSeleccionado.nombre}</span>
                 </h3>
               </div>
               
-              <div className="bg-white p-6 rounded-3xl border mb-6 shadow-sm">
+              <div className="bg-white p-4 md:p-6 rounded-3xl border mb-6 shadow-sm">
                 <div className="flex justify-between items-center mb-4 text-sm font-bold">
                   <button type="button" onClick={() => setMesActual(subMonths(mesActual, 1))} className="p-2 hover:bg-gray-100 rounded-lg">◀</button>
                   <span className="capitalize">{format(mesActual, 'MMMM yyyy', { locale: es })}</span>
@@ -294,13 +300,27 @@ export default function PaginaLocal() {
               )}
             </div>
 
-            <div className="p-8 md:w-1/2 flex flex-col justify-center bg-white overflow-y-auto">
+            {/* --- COLUMNA DERECHA: FORMULARIO --- 
+                Lógica Mobile: Si NO hay hora, se oculta (hidden). Si SÍ hay hora, se muestra (flex).
+                Lógica Desktop: Siempre se muestra (md:flex).
+            */}
+            <div className={`p-6 md:p-8 md:w-1/2 flex-col justify-center bg-white overflow-y-auto ${!horaSeleccionada ? 'hidden md:flex' : 'flex'}`}>
+              
+              {/* Botón Volver (Solo Mobile) */}
+              <button 
+                onClick={() => setHoraSeleccionada('')} 
+                className="md:hidden mb-6 flex items-center gap-2 text-gray-500 font-bold text-xs uppercase tracking-widest"
+              >
+                ← Volver al calendario
+              </button>
+
               {!horaSeleccionada ? (
-                <div className="text-center py-20 text-gray-400 font-bold italic text-xs uppercase tracking-widest opacity-50 select-none">
+                <div className="hidden md:block text-center py-20 text-gray-400 font-bold italic text-xs uppercase tracking-widest opacity-50 select-none">
                   Selecciona una fecha y hora <br/> para continuar...
                 </div>
               ) : (
                 <form onSubmit={enviar} className="space-y-4 animate-in slide-in-from-right-4 duration-500">
+                  
                   <div className="bg-green-50 p-5 rounded-2xl border border-green-100 mb-2 shadow-sm">
                     <p className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-1">Tu cita</p>
                     <p className="font-bold text-green-900 leading-tight">
