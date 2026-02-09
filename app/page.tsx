@@ -21,7 +21,7 @@ export default async function Home() {
   if (error) {
     return <div className="p-10">Error: {error.message}</div>
   }
-
+// Comentario para forzar el redeploy en Vercel
   return (
     <main className="min-h-screen p-8 bg-gray-50">
       <h1 className="text-3xl font-bold text-center mb-10 text-blue-600">
