@@ -1,7 +1,17 @@
 import { supabase } from '../../../lib/supabase'
 
 export const dynamic = 'force-dynamic'
-
+// 1. Esta función genera el título de la pestaña automáticamente
+export async function generateMetadata(props: { params: Promise<{ slug: string }> }) {
+  const params = await props.params;
+  // Convertimos el slug (peluqueria-juanito) en un nombre bonito (PELUQUERIA JUANITO)
+  const nombreLimpio = params.slug.replace(/-/g, ' ').toUpperCase();
+  
+  return {
+    title: `${nombreLimpio} | Agéndalo Talca`,
+    description: `Reserva tu hora en ${nombreLimpio} a través de Agéndalo Talca.`
+  };
+}
 // Definimos la estructura exacta para que TypeScript no se queje
 interface Servicio {
   id: number;
