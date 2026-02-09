@@ -15,9 +15,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Agendalo Talca",
   description: "La plataforma de reservas de los mejores locales de Talca",
-  icons: {
+  //icons: {
     //icon: '/icon.png', // O el nombre exacto que le pusiste en /public !!
-  },
+  //},
 };
 
 export default function RootLayout({
