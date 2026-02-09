@@ -2,7 +2,7 @@ import { supabase } from '../../../lib/supabase'
 
 export const dynamic = 'force-dynamic'
 
-// Definimos la interfaz para evitar errores de tipo "any"
+// Definimos la estructura exacta para que TypeScript no se queje
 interface Servicio {
   id: number;
   nombre: string;
@@ -12,57 +12,61 @@ interface Servicio {
   local_slug: string;
 }
 
-// Next.js requiere que 'params' sea una Promesa en versiones recientes
-export default async function PaginaLocal({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params; // Extraemos el slug correctamente
+// En las versiones actuales, 'params' debe ser tratado como una Promesa
+export default async function PaginaLocal(props: { params: Promise<{ slug: string }> }) {
+  const params = await props.params;
+  const slug = params.slug;
 
   try {
+    // Consulta a Supabase filtrando por la columna que creamos
     const { data, error } = await supabase
       .from('servicios')
       .select('*')
-      .eq('local_slug', slug)
+      .eq('local_slug', slug);
 
     if (error) throw error;
 
     const servicios = data as Servicio[];
 
+    // Si no hay datos, mostramos un mensaje limpio
     if (!servicios || servicios.length === 0) {
       return (
-        <div className="p-10 text-center font-sans">
-          <h1 className="text-xl text-gray-600">No hay servicios para "{slug}"</h1>
+        <div className="p-20 text-center font-sans">
+          <h1 className="text-2xl text-gray-400">Local "{slug}" no encontrado</h1>
         </div>
-      )
+      );
     }
 
-    const nombreLocal = servicios[0].local
+    const nombreLocal = servicios[0].local;
 
     return (
-      <main className="min-h-screen p-8 bg-gray-50">
-        <h1 className="text-4xl font-bold text-center mb-10 text-blue-700 uppercase">
+      <main className="min-h-screen p-8 bg-gray-50 font-sans">
+        <h1 className="text-4xl font-extrabold text-center mb-12 text-blue-600 uppercase">
           {nombreLocal}
         </h1>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
           {servicios.map((servicio) => (
-            <div key={servicio.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+            <div key={servicio.id} className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
               <h2 className="text-xl font-bold text-gray-800">{servicio.nombre}</h2>
-              <p className="text-blue-600 font-black text-2xl mt-2">
+              <p className="text-blue-500 font-black text-3xl mt-2">
                 ${servicio.precio.toLocaleString('es-CL')}
               </p>
-              <button className="w-full mt-6 bg-blue-600 text-white py-3 rounded-xl font-bold">
+              <button className="w-full mt-8 bg-blue-600 text-white py-4 rounded-2xl font-bold hover:bg-blue-700 transition-all">
                 AGENDAR AHORA
               </button>
             </div>
           ))}
         </div>
       </main>
-    )
+    );
   } catch (err: any) {
+    // Si algo falla en el servidor, lo atrapamos aquí
     return (
-      <div className="p-10 bg-red-50 text-red-800 m-5 rounded-xl border border-red-200">
-        <h2 className="font-bold">Error de Conexión:</h2>
-        <p className="text-sm mt-2">{err.message}</p>
+      <div className="p-10 bg-red-50 text-red-700 m-10 rounded-2xl border border-red-100">
+        <p className="font-bold">Error de conexión:</p>
+        <code className="text-xs">{err.message}</code>
       </div>
-    )
+    );
   }
 }
