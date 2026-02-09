@@ -1,8 +1,9 @@
-'use client' // Permitimos interactividad (filtros y clics) en el navegador
+'use client' // Indica que este componente tiene interactividad
+
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
-// Definimos la estructura de los datos que vienen de la tabla 'servicios'
+// Definimos la estructura exacta para que TypeScript no de errores en el build
 interface Servicio {
   id: number;
   nombre: string;
@@ -10,53 +11,57 @@ interface Servicio {
   categoria: string;
   local: string;
   local_slug: string;
-  imagen_url: string; // Nueva columna para las fotos de los locales
+  imagen_url: string;
 }
 
 export default function Home() {
-  // Estado para guardar la lista completa de servicios
+  // Inicializamos con un array vacío para evitar errores de "undefined"
   const [servicios, setServicios] = useState<Servicio[]>([]);
-  // Estado para saber qué categoría seleccionó el usuario (por defecto 'Todos')
   const [categoriaActiva, setCategoriaActiva] = useState('Todos');
 
-  // Hook que se ejecuta al cargar la página para traer los datos de Supabase
   useEffect(() => {
-    async function cargarServicios() {
-      const { data } = await supabase
+    // Función asíncrona para traer los datos de Supabase en Talca
+    const cargarServicios = async () => {
+      const { data, error } = await supabase
         .from('servicios')
-        .select('*'); // Traemos todas las columnas
-      if (data) setServicios(data);
-    }
+        .select('*');
+      
+      if (error) {
+        console.error('Error cargando servicios:', error);
+        return;
+      }
+      
+      if (data) setServicios(data as Servicio[]);
+    };
+
     cargarServicios();
   }, []);
 
-  // Creamos una lista de categorías únicas extrayéndolas de los servicios existentes
-  // El 'Set' elimina los duplicados (ej: si hay 5 barberías, solo aparece una vez 'Barbería')
-  const categorias = ['Todos', ...new Set(servicios.map(s => s.categoria))];
+  // Creamos la lista de categorías sin duplicados
+  const categorias = ['Todos', ...Array.from(new Set(servicios.map(s => s.categoria)))];
 
-  // Filtramos la lista en tiempo real según el botón que presione el usuario
+  // Lógica de filtrado instantáneo
   const serviciosFiltrados = categoriaActiva === 'Todos' 
     ? servicios 
     : servicios.filter(s => s.categoria === categoriaActiva);
 
   return (
-    <main className="min-h-screen bg-gray-50 p-6 md:p-12 font-sans text-gray-900">
+    <main className="min-h-screen bg-gray-50 p-6 md:p-12 font-sans">
       <div className="max-w-6xl mx-auto">
-        {/* Cabecera Principal */}
-        <header className="mb-12">
-          <h1 className="text-4xl font-black tracking-tight mb-2">Agéndalo Talca</h1>
-          <p className="text-gray-500 text-lg">Descubre y reserva en los mejores servicios de la ciudad.</p>
+        <header className="mb-10">
+          <h1 className="text-4xl font-black text-gray-900">Agéndalo Talca</h1>
+          <p className="text-gray-500 text-lg">Reserva de forma simple y rápida.</p>
         </header>
 
-        {/* --- SECCIÓN DE FILTROS --- */}
-        <div className="flex gap-2 mb-10 overflow-x-auto pb-4 scrollbar-hide">
+        {/* --- BOTONES DE FILTRO --- */}
+        <div className="flex gap-2 mb-10 overflow-x-auto pb-4">
           {categorias.map(cat => (
             <button
               key={cat}
-              onClick={() => setCategoriaActiva(cat)} // Al hacer clic, filtramos la lista
+              onClick={() => setCategoriaActiva(cat)}
               className={`px-6 py-2 rounded-full font-bold transition-all border whitespace-nowrap ${
                 categoriaActiva === cat 
-                ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-200' 
+                ? 'bg-blue-600 text-white border-blue-600' 
                 : 'bg-white text-gray-600 border-gray-200 hover:border-blue-400'
               }`}
             >
@@ -65,48 +70,30 @@ export default function Home() {
           ))}
         </div>
 
-        {/* --- GRILLA DE TARJETAS --- */}
+        {/* --- GRILLA DINÁMICA --- */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
           {serviciosFiltrados.map(servicio => (
-            <div 
-              key={servicio.id} 
-              className="bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-xl transition-all duration-300 group"
-            >
-              {/* Contenedor de la Imagen con efecto zoom */}
-              <div className="h-56 overflow-hidden relative">
+            <div key={servicio.id} className="bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md transition-all">
+              {/* Imagen con fallback (si no hay imagen, pone una por defecto) */}
+              <div className="h-48 bg-gray-200 overflow-hidden">
                 <img 
                   src={servicio.imagen_url || 'https://images.unsplash.com/photo-1521737711867-e3b97375f902?w=500'} 
                   alt={servicio.nombre}
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                  className="w-full h-full object-cover"
                 />
-                {/* Etiqueta de Categoría sobre la imagen */}
-                <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-md px-3 py-1 rounded-full text-xs font-black text-blue-600 uppercase">
-                  {servicio.categoria}
-                </div>
               </div>
 
-              {/* Información del Servicio */}
               <div className="p-6">
-                <h2 className="text-xl font-bold text-gray-800 mb-1 group-hover:text-blue-600 transition-colors">
-                  {servicio.nombre}
-                </h2>
-                <p className="text-gray-500 text-sm mb-6 flex items-center">
-                  <span className="mr-1">📍</span> {servicio.local}
-                </p>
+                <div className="text-xs font-bold text-blue-600 uppercase mb-2">{servicio.categoria}</div>
+                <h2 className="text-xl font-bold text-gray-800 mb-4">{servicio.nombre}</h2>
                 
-                {/* Fila de Precio y Botón de Navegación */}
-                <div className="flex items-center justify-between border-t border-gray-50 pt-4">
-                  <div>
-                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Precio</p>
-                    <span className="text-2xl font-black text-gray-900">
-                      ${servicio.precio.toLocaleString('es-CL')}
-                    </span>
-                  </div>
-                  
-                  {/* Este enlace lleva a la página dinámica del local que creamos antes */}
+                <div className="flex items-center justify-between">
+                  <span className="text-2xl font-black text-gray-900">
+                    ${servicio.precio.toLocaleString('es-CL')}
+                  </span>
                   <a 
                     href={`/local/${servicio.local_slug}`}
-                    className="bg-gray-900 text-white px-6 py-3 rounded-2xl font-bold text-sm hover:bg-blue-600 transition-all active:scale-95"
+                    className="bg-gray-900 text-white px-5 py-2 rounded-xl font-bold text-sm hover:bg-blue-600 transition-colors"
                   >
                     Ver Local
                   </a>
@@ -115,13 +102,6 @@ export default function Home() {
             </div>
           ))}
         </div>
-
-        {/* Mensaje en caso de que no existan servicios en esa categoría */}
-        {serviciosFiltrados.length === 0 && (
-          <div className="text-center py-20">
-            <p className="text-gray-400 font-medium">No hay servicios disponibles en esta categoría todavía.</p>
-          </div>
-        )}
       </div>
     </main>
   );
