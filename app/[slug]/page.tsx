@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { supabase } from '../../../lib/supabase' 
+import { supabase } from '../../lib/supabase' 
 import { useParams } from 'next/navigation'
+import Link from 'next/link' 
 import { 
   format, 
   startOfMonth, 
@@ -25,6 +26,7 @@ interface Local {
   telefono_local?: string;
   direccion?: string;
   descripcion?: string;
+  estado: string; 
 }
 
 interface Servicio {
@@ -64,8 +66,14 @@ export default function PaginaLocal() {
       try {
         const { data: L } = await supabase.from('locales').select('*').eq('slug', slug).single();
         const { data: S } = await supabase.from('servicios').select('*').eq('local_slug', slug);
-        if (L) setLocal(L as Local); 
+        
+        if (L) {
+            setLocal(L as Local);
+            // --- CAMBIO AQUÍ: ACTUALIZAR EL TÍTULO DE LA PESTAÑA ---
+            document.title = `${L.nombre} | Agendalo`; 
+        }
         if (S) setServicios(S as Servicio[]);
+
       } catch (err) {
         console.error("Error general:", err);
       } finally {
@@ -114,28 +122,7 @@ export default function PaginaLocal() {
       alert('Hubo un error al guardar. Inténtalo de nuevo.');
       return;
     }
-
-    try {
-      await fetch('/api/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nombre: nombre,
-          email: email,
-          servicio: servicioSeleccionado.nombre,
-          precio: servicioSeleccionado.precio.toLocaleString('es-CL'),
-          fecha: format(diaSeleccionado as Date, "dd 'de' MMMM", { locale: es }),
-          hora: horaSeleccionada,
-          localNombre: local?.nombre || 'Local',
-          telefonoLocal: local?.telefono_local || 'Contacto',
-          direccionLocal: local?.direccion || '',
-          mapsUrl: local?.maps_url || '#'
-        })
-      });
-    } catch (err: any) {
-      console.error("Error enviando correo:", err);
-    }
-
+    
     setMostrarForm(false); 
     setReservaExitosa(true);
   };
@@ -151,19 +138,73 @@ export default function PaginaLocal() {
     end: endOfWeek(endOfMonth(mesActual), { weekStartsOn: 1 }) 
   });
 
-  if (cargando) return <div className="min-h-screen flex items-center justify-center font-bold text-blue-600 animate-pulse uppercase tracking-widest">Cargando...</div>;
-  if (!local) return <div className="min-h-screen flex items-center justify-center font-bold text-red-500">Local no encontrado</div>;
+  // -----------------------------------------------------------
+  // PANTALLAS DE CARGA Y ERRORES
+  // -----------------------------------------------------------
+
+  if (cargando) return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+          <p className="font-bold text-blue-600 animate-pulse uppercase tracking-widest text-sm">Cargando...</p>
+      </div>
+  );
+
+  if (!local) return (
+      <div className="min-h-screen flex items-center justify-center font-bold text-gray-400">Local no encontrado</div>
+  );
+
+  // -----------------------------------------------------------
+  // 🔥 LÓGICA DE SEGURIDAD (BLOQUEO DE CUENTA)
+  // -----------------------------------------------------------
+  if (local.estado !== 'activo') {
+      // Si está bloqueado, también le cambiamos el título para que no se vea feo
+      document.title = "Local no disponible";
+      
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-6 text-center font-sans">
+          
+          <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mb-6 shadow-xl text-4xl animate-pulse">
+            ⏳
+          </div>
+  
+          <h1 className="text-3xl font-black text-gray-800 mb-4 tracking-tight">
+            Local en Pausa
+          </h1>
+  
+          <p className="text-gray-500 max-w-md font-medium text-lg leading-relaxed">
+            Este perfil se encuentra temporalmente desactivado mientras realizamos ajustes en la agenda.
+          </p>
+  
+          <p className="text-sm text-gray-400 mt-2">
+            Por favor, vuelve a intentarlo más tarde.
+          </p>
+  
+          <Link 
+            href="/" 
+            className="mt-10 px-8 py-4 bg-black text-white rounded-2xl font-bold uppercase tracking-widest hover:scale-105 transition-transform shadow-lg text-xs"
+          >
+            Buscar otros locales
+          </Link>
+  
+          <div className="mt-12 opacity-30">
+             <img src="/logos/logo-agendalo.png" className="w-20 h-auto grayscale" alt="Logo" />
+          </div>
+        </div>
+      )
+  }
+
+  // -----------------------------------------------------------
+  // PERFIL NORMAL
+  // -----------------------------------------------------------
 
   return (
     <main className="min-h-screen bg-white font-sans text-gray-900 pb-20 relative">
       
-      {/* MENSAJE DE ÉXITO (MODAL FINAL) */}
+      {/* MENSAJE DE ÉXITO */}
       {reservaExitosa && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-[60] animate-in fade-in duration-300">
           <div className="bg-white rounded-[2rem] p-8 max-w-md w-full text-center shadow-2xl transform transition-all scale-100 relative overflow-hidden">
             
-            {/* 2. LOGO EN VEZ DEL CHECK (Centrado y Grande) */}
-            <div className="w-24 h-24 mx-auto mb-6 flex items-center justify-center">
+            <div className="w-48 h-48 mx-auto mb-6 flex items-center justify-center">
                <img 
                  src="/logos/logo-agendalo.png" 
                  alt="Logo Agendalo" 
@@ -174,7 +215,9 @@ export default function PaginaLocal() {
             <h2 className="text-2xl font-black text-gray-900 mb-2">¡Listo {nombre}!</h2>
             
             <p className="text-gray-500 font-medium mb-8">
-              Tu hora para <span className="font-bold text-blue-600">{servicioSeleccionado?.nombre}</span> ha sido agendada correctamente. <br/>
+              Tu hora para <span className="font-bold text-blue-600">{servicioSeleccionado?.nombre}</span> 
+              {" "}en <span className="font-bold text-gray-800">{local?.nombre}</span> 
+              {" "}ha sido agendada correctamente. <br/>
               Revisa tu correo para más detalles.
             </p>
             
@@ -190,7 +233,7 @@ export default function PaginaLocal() {
 
       {/* Banner */}
       <div className="h-64 bg-blue-900 relative flex items-center justify-center text-white text-center">
-        <img src={local.foto_banner} className="absolute inset-0 w-full h-full object-cover opacity-40" alt="" />
+        <img src={local.foto_banner || 'https://via.placeholder.com/1200x600'} className="absolute inset-0 w-full h-full object-cover opacity-40" alt="" />
         <h1 className="relative text-4xl md:text-6xl font-black uppercase tracking-tighter px-4 drop-shadow-lg">{local.nombre}</h1>
       </div>
 
@@ -216,14 +259,32 @@ export default function PaginaLocal() {
         <h2 className="text-2xl font-black mb-6 uppercase tracking-tight">Servicios</h2>
         <div className="grid gap-4">
           {servicios.map(s => (
-            <div key={s.id} className="border-2 border-gray-50 p-6 rounded-[2rem] flex justify-between items-center bg-white shadow-sm hover:border-blue-500 transition-all group">
-              <div>
-                <h3 className="font-bold text-xl group-hover:text-blue-600 transition-colors">{s.nombre}</h3>
-                <p className="text-blue-600 font-black text-2xl">${s.precio.toLocaleString('es-CL')}</p>
+            <div key={s.id} className="border-2 border-gray-50 p-4 md:p-6 rounded-[2rem] flex items-center justify-between bg-white shadow-sm hover:border-blue-500 transition-all group">
+              
+              <div className="flex items-center gap-4">
+                {s.imagen_url && (
+                  <div className="w-16 h-16 rounded-2xl overflow-hidden bg-gray-100 shrink-0 shadow-sm border border-gray-100">
+                    <img 
+                      src={s.imagen_url} 
+                      alt={s.nombre} 
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    />
+                  </div>
+                )}
+                
+                <div>
+                  <h3 className="font-bold text-lg md:text-xl group-hover:text-blue-600 transition-colors leading-tight">
+                    {s.nombre}
+                  </h3>
+                  <p className="text-blue-600 font-black text-xl md:text-2xl">
+                    ${s.precio.toLocaleString('es-CL')}
+                  </p>
+                </div>
               </div>
+
               <button 
                 onClick={() => { setServicioSeleccionado(s); setMostrarForm(true); }} 
-                className="bg-black text-white px-8 py-3 rounded-2xl font-bold hover:bg-blue-600 transition shadow-md"
+                className="bg-black text-white px-5 py-3 md:px-8 md:py-3 rounded-2xl font-bold hover:bg-blue-600 transition shadow-md text-sm md:text-base shrink-0 ml-2"
               >
                 Agendar
               </button>
@@ -232,12 +293,44 @@ export default function PaginaLocal() {
         </div>
       </div>
 
-      {/* MODAL PRINCIPAL */}
+      <footer className="mt-16 py-10 text-center border-t border-gray-100 bg-gray-50/50">
+        <a 
+          href="/" 
+          target="_blank" 
+          className="group inline-flex flex-col items-center gap-3 transition-all hover:scale-105"
+        >
+          <div className="flex items-center gap-3 opacity-70 group-hover:opacity-100 transition-opacity">
+            <div className="text-right">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-tight">
+                Potenciado por
+              </p>
+              <p className="text-gray-900 font-black text-sm leading-tight group-hover:text-blue-600">
+                Agéndalo Talca
+              </p>
+            </div>
+            
+            <img 
+              src="/logos/logo-agendalo.png" 
+              alt="Logo" 
+              className="w-16 h-16 object-contain" 
+            />
+          </div>
+
+          <p className="text-[11px] text-gray-500 font-medium bg-white px-3 py-1 rounded-full shadow-sm border border-gray-100 group-hover:border-blue-200 group-hover:text-blue-600 transition-colors">
+            🚀 ¿Tienes un local? <span className="underline decoration-blue-200 underline-offset-2">Crea tu agenda aquí</span>
+          </p>
+        </a>
+        
+        <p className="text-[10px] text-gray-300 mt-6">
+          © {new Date().getFullYear()} Derechos Reservados.
+        </p>
+      </footer>
+
+      {/* MODAL AGENDAMIENTO */}
       {mostrarForm && servicioSeleccionado && !reservaExitosa && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-0 md:p-4 z-50">
           <div className="bg-white md:rounded-[3rem] shadow-2xl overflow-hidden max-w-5xl w-full h-full md:h-auto md:max-h-[90vh] flex flex-col md:flex-row">
             
-            {/* COLUMNA IZQUIERDA: CALENDARIO */}
             <div className={`p-6 md:p-8 border-r bg-gray-50/50 md:w-1/2 overflow-y-auto ${horaSeleccionada ? 'hidden md:block' : 'block'}`}>
               
               <button onClick={() => setMostrarForm(false)} className="md:hidden mb-4 text-gray-400 font-bold text-sm">
@@ -307,7 +400,6 @@ export default function PaginaLocal() {
               )}
             </div>
 
-            {/* COLUMNA DERECHA: FORMULARIO */}
             <div className={`p-6 md:p-8 md:w-1/2 flex-col justify-center bg-white overflow-y-auto ${!horaSeleccionada ? 'hidden md:flex' : 'flex'}`}>
               
               <button 
@@ -324,7 +416,6 @@ export default function PaginaLocal() {
               ) : (
                 <form onSubmit={enviar} className="space-y-4 animate-in slide-in-from-right-4 duration-500">
                   
-                  {/* 1. CAJA VERDE CON LOGO A LA DERECHA */}
                   <div className="bg-green-50 p-5 rounded-2xl border border-green-100 mb-2 shadow-sm flex justify-between items-center">
                     <div>
                       <p className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-1">Tu cita</p>
@@ -333,12 +424,11 @@ export default function PaginaLocal() {
                         a las {horaSeleccionada} hrs
                       </p>
                     </div>
-                    {/* El Logo aquí a la derecha */}
                     <div className="pl-4">
                       <img 
                         src="/logos/logo-agendalo.png" 
                         alt="Logo" 
-                        className="w-12 h-12 object-contain opacity-80" 
+                        className="w-16 h-16 object-contain opacity-80" 
                       />
                     </div>
                   </div>
