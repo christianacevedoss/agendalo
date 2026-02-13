@@ -347,7 +347,7 @@ export default function DashboardDuenio() {
                   <div className="text-center py-20 border-2 border-dashed border-gray-200 rounded-[3rem] bg-gray-50/50">
                     <p className="text-gray-400 font-bold uppercase text-xs mb-4">No tienes sucursales registradas</p>
                     <button onClick={() => router.push(`/${slug}/dashboard/nueva-sucursal`)} className="bg-green-500 text-white font-black text-xs uppercase py-3 px-6 rounded-xl hover:bg-green-600 transition-all shadow-lg">
-                       Comenzar agregando la primera
+                       Comenzar agregando la primera.
                     </button>
                   </div>
                 )}
@@ -358,4 +358,4 @@ export default function DashboardDuenio() {
       </div>
     </div>
   )
-}
+} 
